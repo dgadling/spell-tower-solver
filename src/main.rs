@@ -1,5 +1,6 @@
 mod dictionary;
+use dictionary::Dictionary;
 
 fn main() {
-    dictionary::init();
+    let dict = Dictionary::new("words_alpha.txt", "dictionary.db", 3);
 }
