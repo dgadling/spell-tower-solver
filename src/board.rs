@@ -4,6 +4,12 @@ use std::fmt;
 use crate::dictionary::Dictionary;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FoundWord {
+    path: Vec<Position>,
+    word: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Board {
     width: usize,
     height: usize,
@@ -38,38 +44,69 @@ impl Board {
         let start = Position::new(0, 0);
 
         let mut path = Vec::new();
+        path.push(start.clone());
 
-        let first_word = self._find_word(start, &mut path, "".to_string(), dict);
+        let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
+        println!("Searching for the first words");
+        let first_words = self._find_word(&start, &mut path, &path_str, dict);
+        println!(
+            "Found the following word(s) starting @ {:?}: {:?}",
+            start, first_words
+        );
     }
 
     fn _find_word(
         &self,
-        pos: Position,
+        pos: &Position,
         path: &mut Vec<Position>,
-        path_str: String,
+        path_str: &String,
         dict: &mut Dictionary,
-    ) -> String {
+    ) -> Vec<FoundWord> {
+        /*
+        We have arrived at pos. From here we need to
+            1. Figure out if path_str counts as a complete word, add path + word to our list of results
+            2. Find candidate positions (not in our path, and not blocked)
+            3. Filter out candidate positions where path_str + their value is not part of a word
+            4. For each candidate: recurse and add their list of words to ours
+            5. Return a flattened version of our list of results
+        */
+        let mut found_words: Vec<FoundWord> = Vec::new();
+
+        if path_str.len() >= 3 && dict.is_word(&path_str) {
+            found_words.push(FoundWord {
+                path: path.clone(),
+                word: path_str.clone(),
+            });
+        }
+
         let candidate_positions = pos.neighbors(self.width, self.height);
-        let candidate_letters = candidate_positions
-            .iter()
-            .filter_map(|p| {
-                let l = self.tiles.get(p.row).unwrap().get(p.col).unwrap();
 
-                if l.eq("") || l.eq(".") {
-                    None
-                } else {
-                    Some((p, l))
+        for p in candidate_positions {
+            // Can't cross our existing path
+            if path.contains(&p) {
+                continue;
+            }
+
+            let l = self.tiles.get(p.row).unwrap().get(p.col).unwrap();
+
+            if l.eq("") || l.eq(".") {
+                // This tile is a dead-end, no need to keep looking
+                continue;
+            }
+
+            let fragment = path_str.clone() + l;
+            if dict.has_path(&fragment) {
+                let mut next_path = path.clone();
+                next_path.push(p.clone());
+
+                let found = self._find_word(&p, &mut next_path, &fragment, dict);
+                if !found.is_empty() {
+                    found_words.extend(found);
                 }
-            })
-            .collect::<Vec<(&Position, &String)>>();
-        println!(
-            "At ({:?}, {}) with letters of {:?}",
-            pos,
-            self.tiles.get(pos.row).unwrap().get(pos.col).unwrap(),
-            candidate_letters
-        );
+            }
+        }
 
-        "flub".to_string()
+        found_words
     }
 }
 

@@ -1,9 +1,8 @@
 use indicatif::ProgressBar;
+use rusqlite::{Connection, Statement};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
-
-use rusqlite::{Connection, Statement};
 
 pub struct Dictionary {
     source_file: String,
@@ -114,6 +113,31 @@ impl Dictionary {
                 placeholders
             ))
             .expect("Couldn't prepare a statement?!")
+    }
+
+    pub fn has_path(&mut self, prefix: &str) -> bool {
+        let query = format!(
+            "SELECT COUNT(*) FROM words WHERE substr(word, 1, {}) = '{}'",
+            prefix.len(),
+            prefix
+        );
+
+        let word_count = self
+            .conn
+            .query_row(&query, [], |row| row.get(0) as Result<u32, rusqlite::Error>)
+            .unwrap();
+
+        word_count > 0
+    }
+
+    pub fn is_word(&mut self, prefix: &str) -> bool {
+        let query = format!("SELECT word FROM words WHERE word = '{}'", prefix);
+
+        let word = self.conn.query_row(&query, [], |row| {
+            row.get(0) as Result<String, rusqlite::Error>
+        });
+
+        word.is_ok()
     }
 
     pub fn get_candidates_for(&mut self, prefix: &str, options: &Vec<&str>) -> Vec<String> {
