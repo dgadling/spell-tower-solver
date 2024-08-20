@@ -1,5 +1,6 @@
 use indicatif::ProgressBar;
 use rusqlite::{Connection, Statement};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
@@ -9,6 +10,8 @@ pub struct Dictionary {
     words_db_path: String,
     min_word_len: usize,
     conn: rusqlite::Connection,
+    word_cache: HashMap<String, bool>,
+    path_cache: HashMap<String, bool>,
 }
 
 impl Dictionary {
@@ -21,6 +24,8 @@ impl Dictionary {
             words_db_path: db_path.to_string(),
             min_word_len,
             conn,
+            word_cache: HashMap::new(),
+            path_cache: HashMap::new(),
         };
 
         us.init();
@@ -116,9 +121,12 @@ impl Dictionary {
     }
 
     pub fn has_path(&mut self, prefix: &str) -> bool {
+        if let Some(ans) = self.path_cache.get(prefix){
+            return *ans;
+        }
+
         let query = format!(
-            "SELECT COUNT(*) FROM words WHERE substr(word, 1, {}) = '{}'",
-            prefix.len(),
+            "SELECT COUNT(*) FROM words WHERE word LIKE '{}%'",
             prefix
         );
 
@@ -127,16 +135,22 @@ impl Dictionary {
             .query_row(&query, [], |row| row.get(0) as Result<u32, rusqlite::Error>)
             .unwrap();
 
+        self.path_cache.insert(prefix.to_string(), word_count > 0);
         word_count > 0
     }
 
     pub fn is_word(&mut self, prefix: &str) -> bool {
+        if let Some(ans) = self.word_cache.get(prefix){
+            return *ans;
+        }
+
         let query = format!("SELECT word FROM words WHERE word = '{}'", prefix);
 
         let word = self.conn.query_row(&query, [], |row| {
             row.get(0) as Result<String, rusqlite::Error>
         });
 
+        self.word_cache.insert(prefix.to_string(), word.is_ok());
         word.is_ok()
     }
 

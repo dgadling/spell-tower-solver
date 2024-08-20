@@ -1,6 +1,7 @@
 use indicatif::{ProgressBar, ProgressStyle};
 use phf::{phf_map, phf_set};
 use std::fmt;
+use std::time::SystemTime;
 
 use crate::dictionary::Dictionary;
 
@@ -42,8 +43,10 @@ impl Board {
     }
 
     pub fn find_words(&self, dict: &mut Dictionary) {
+        let now = SystemTime::now();
         let mut found_words = Vec::new();
-        for row in 0..self.height {
+        // for row in 0..self.height {
+        for row in 0..1 {
             let bar = ProgressBar::new(self.width as u64);
             bar.set_prefix(format!("Row {:>2}/{:>02}", row, self.height));
             bar.set_style(ProgressStyle::with_template("{prefix} {wide_bar} {pos}/{len}").unwrap());
@@ -61,11 +64,15 @@ impl Board {
             }
             bar.finish();
         }
+        println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
+
         println!("Found {} words! Here's the 15 longest", found_words.len());
         found_words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
-        for fwd in &found_words[..15] {
+        for fwd in &found_words[..2] {
             println!("  {} via {:?}", fwd.word, fwd.path);
         }
+
+        println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
     }
 
     fn _find_word(
