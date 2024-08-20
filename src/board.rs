@@ -1,3 +1,4 @@
+use indicatif::{ProgressBar, ProgressStyle};
 use phf::{phf_map, phf_set};
 use std::fmt;
 
@@ -19,8 +20,8 @@ pub struct Board {
 
 impl Board {
     pub fn new_from(tiles: Vec<Vec<String>>, multipliers: Vec<(usize, usize)>) -> Self {
-        let width = tiles.len();
-        let height = tiles.get(0).unwrap().len();
+        let height = tiles.len() - 1;
+        let width = tiles.get(0).unwrap().len() - 1;
 
         Self {
             width,
@@ -41,18 +42,30 @@ impl Board {
     }
 
     pub fn find_words(&self, dict: &mut Dictionary) {
-        let start = Position::new(0, 0);
+        let mut found_words = Vec::new();
+        for row in 0..self.height {
+            let bar = ProgressBar::new(self.width as u64);
+            bar.set_prefix(format!("Row {:>2}/{:>02}", row, self.height));
+            bar.set_style(ProgressStyle::with_template("{prefix} {wide_bar} {pos}/{len}").unwrap());
+            for col in 0..self.width {
+                let start = Position::new(row, col);
+                let mut path = Vec::new();
+                path.push(start.clone());
 
-        let mut path = Vec::new();
-        path.push(start.clone());
-
-        let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
-        println!("Searching for the first words");
-        let first_words = self._find_word(&start, &mut path, &path_str, dict);
-        println!(
-            "Found the following word(s) starting @ {:?}: {:?}",
-            start, first_words
-        );
+                let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
+                let words = self._find_word(&start, &mut path, &path_str, dict, &bar);
+                if !words.is_empty() {
+                    found_words.extend(words);
+                }
+                bar.inc(1);
+            }
+            bar.finish();
+        }
+        println!("Found {} words! Here's the 15 longest", found_words.len());
+        found_words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
+        for fwd in &found_words[..15] {
+            println!("  {} via {:?}", fwd.word, fwd.path);
+        }
     }
 
     fn _find_word(
@@ -61,6 +74,7 @@ impl Board {
         path: &mut Vec<Position>,
         path_str: &String,
         dict: &mut Dictionary,
+        bar: &ProgressBar,
     ) -> Vec<FoundWord> {
         /*
         We have arrived at pos. From here we need to
@@ -81,9 +95,11 @@ impl Board {
 
         let candidate_positions = pos.neighbors(self.width, self.height);
 
+        bar.inc_length(candidate_positions.len() as u64);
         for p in candidate_positions {
             // Can't cross our existing path
             if path.contains(&p) {
+                bar.inc(1);
                 continue;
             }
 
@@ -91,6 +107,7 @@ impl Board {
 
             if l.eq("") || l.eq(".") {
                 // This tile is a dead-end, no need to keep looking
+                bar.inc(1);
                 continue;
             }
 
@@ -99,13 +116,15 @@ impl Board {
                 let mut next_path = path.clone();
                 next_path.push(p.clone());
 
-                let found = self._find_word(&p, &mut next_path, &fragment, dict);
+                let found = self._find_word(&p, &mut next_path, &fragment, dict, bar);
                 if !found.is_empty() {
                     found_words.extend(found);
                 }
+                bar.inc(1);
             }
         }
 
+        bar.inc(1);
         found_words
     }
 }
@@ -161,7 +180,7 @@ impl Position {
             return None;
         }
         let c = Position::new(self.row - 1, self.col + 1);
-        if c.row > width {
+        if c.col > width {
             return None;
         }
         Some(c)
@@ -199,7 +218,7 @@ impl Position {
     pub fn south_east(&self, width: usize, height: usize) -> Option<Position> {
         let c = Position::new(self.row + 1, self.col + 1);
 
-        if c.row > width || c.col > height {
+        if c.col > width || c.row > height {
             return None;
         }
         Some(c)
