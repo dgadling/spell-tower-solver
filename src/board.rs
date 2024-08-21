@@ -45,18 +45,16 @@ impl Board {
     pub fn find_words(&self, dict: &mut Dictionary) {
         let now = SystemTime::now();
         let mut found_words = Vec::new();
+
         // for row in 0..self.height {
         for row in 0..1 {
             let bar = ProgressBar::new(self.width as u64);
             bar.set_prefix(format!("Row {:>2}/{:>02}", row, self.height));
             bar.set_style(ProgressStyle::with_template("{prefix} {wide_bar} {pos}/{len}").unwrap());
-            for col in 0..self.width {
+            // for col in 0..self.width {
+            for col in 0..1 {
                 let start = Position::new(row, col);
-                let mut path = Vec::new();
-                path.push(start.clone());
-
-                let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
-                let words = self._find_word(&start, &mut path, &path_str, dict, &bar);
+                let words = self.finds_words_starting_from(start, dict, &bar);
                 if !words.is_empty() {
                     found_words.extend(words);
                 }
@@ -73,6 +71,16 @@ impl Board {
         }
 
         println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
+    }
+
+    fn finds_words_starting_from(&self, start: Position, dict: &mut Dictionary, bar: &ProgressBar) -> Vec<FoundWord> {
+        let mut path = Vec::new();
+        path.push(start.clone());
+
+        let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
+        let words = self._find_word(&start, &mut path, &path_str, dict, bar);
+        bar.inc(1);
+        words
     }
 
     fn _find_word(
