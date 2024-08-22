@@ -1,5 +1,8 @@
+use crossbeam::thread;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::fmt;
+use std::sync::Arc;
+use std::thread::scope;
 use std::time::SystemTime;
 
 use crate::dictionary::Dictionary;
@@ -45,29 +48,50 @@ impl Board {
 
     pub fn find_words(&self, dict_path: &str) {
         let now = SystemTime::now();
-        let mut found_words = Vec::new();
 
-        // for row in 0..self.height {
-        for row in 0..1 {
-            let bar = ProgressBar::new(self.width as u64);
-            bar.set_prefix(format!("Row {:>2}/{:>02}", row, self.height));
-            bar.set_style(ProgressStyle::with_template("{prefix} {wide_bar} {pos}/{len}").unwrap());
-            // for col in 0..self.width {
-            for col in 0..1 {
-                let start = Position::new(row, col);
-                let words = self.finds_words_in_starting_from(dict_path, start, &bar);
-                if !words.is_empty() {
-                    found_words.extend(words);
-                }
-                bar.inc(1);
+        // let us = Arc::new(self);
+        // let d_path = Arc::new(dict_path);
+
+        let scope_res = thread::scope(|s| {
+            // let bar = ProgressBar::new(self.width as u64);
+            let mut thread_res = Vec::new();
+            // for row in 0..self.height {
+            for row in 0..1 {
+                // bar.set_prefix(format!("Row {:>2}/{:>02}", row, self.height));
+                // bar.set_style(
+                //     ProgressStyle::with_template("{prefix} {wide_bar} {pos}/{len}").unwrap(),
+                // );
+                thread_res.push(s.spawn(move |_| {
+                    let mut t_words = Vec::new();
+                    // for col in 0..self.width {
+                    for col in 0..1 {
+                        // let t_board = Arc::clone(&us);
+                        // let t_bar = Arc::clone(&bar);
+                        // let t_dpath = Arc::clone(&d_path);
+                        let start = Position::new(row, col);
+                        let words = self.finds_words_in_starting_from(&dict_path, start); //, &bar);
+                                                                                          // bar.inc(1);
+                        if !words.is_empty() {
+                            t_words.extend(words);
+                        }
+                    }
+                    t_words
+                }));
+                // bar.finish();
             }
-            bar.finish();
-        }
+            thread_res
+                .iter()
+                .map(|th| th.join().unwrap())
+                .flatten()
+                .collect::<Vec<FoundWord>>()
+        });
+
+        let mut words = scope_res.unwrap();
         println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
 
-        println!("Found {} words! Here's the 15 longest", found_words.len());
-        found_words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
-        for fwd in &found_words[..2] {
+        println!("Found {} words! Here's the 15 longest", words.len());
+        words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
+        for fwd in &words[..2] {
             println!("  {} via {:?}", fwd.word, fwd.path);
         }
 
@@ -78,15 +102,15 @@ impl Board {
         &self,
         dict_path: &str,
         start: Position,
-        bar: &ProgressBar,
+        // bar: &ProgressBar,
     ) -> Vec<FoundWord> {
         let mut dict = Dictionary::new(dict_path);
         let mut path = Vec::new();
         path.push(start.clone());
 
         let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
-        let words = self._find_word(&start, &mut path, &path_str, &mut dict, bar);
-        bar.inc(1);
+        let words = self._find_word(&start, &mut path, &path_str, &mut dict); //, bar);
+                                                                              // bar.inc(1);
         words
     }
 
@@ -96,7 +120,7 @@ impl Board {
         path: &mut Vec<Position>,
         path_str: &String,
         dict: &mut Dictionary,
-        bar: &ProgressBar,
+        // bar: &ProgressBar,
     ) -> Vec<FoundWord> {
         /*
         We have arrived at pos. From here we need to
@@ -117,11 +141,11 @@ impl Board {
 
         let candidate_positions = pos.neighbors(self.width, self.height);
 
-        bar.inc_length(candidate_positions.len() as u64);
+        //bar.inc_length(candidate_positions.len() as u64);
         for p in candidate_positions {
             // Can't cross our existing path
             if path.contains(&p) {
-                bar.inc(1);
+                // bar.inc(1);
                 continue;
             }
 
@@ -129,7 +153,7 @@ impl Board {
 
             if l.eq("") || l.eq(".") {
                 // This tile is a dead-end, no need to keep looking
-                bar.inc(1);
+                // bar.inc(1);
                 continue;
             }
 
@@ -138,15 +162,15 @@ impl Board {
                 let mut next_path = path.clone();
                 next_path.push(p.clone());
 
-                let found = self._find_word(&p, &mut next_path, &fragment, dict, bar);
+                let found = self._find_word(&p, &mut next_path, &fragment, dict); //, bar);
                 if !found.is_empty() {
                     found_words.extend(found);
                 }
-                bar.inc(1);
+                // bar.inc(1);
             }
         }
 
-        bar.inc(1);
+        // bar.inc(1);
         found_words
     }
 }
