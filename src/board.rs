@@ -43,7 +43,7 @@ impl Board {
     }
     */
 
-    pub fn find_words(&self, dict: &mut Dictionary) {
+    pub fn find_words(&self, dict_path: &str) {
         let now = SystemTime::now();
         let mut found_words = Vec::new();
 
@@ -55,7 +55,7 @@ impl Board {
             // for col in 0..self.width {
             for col in 0..1 {
                 let start = Position::new(row, col);
-                let words = self.finds_words_starting_from(start, dict, &bar);
+                let words = self.finds_words_in_starting_from(dict_path, start, &bar);
                 if !words.is_empty() {
                     found_words.extend(words);
                 }
@@ -74,12 +74,18 @@ impl Board {
         println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
     }
 
-    fn finds_words_starting_from(&self, start: Position, dict: &mut Dictionary, bar: &ProgressBar) -> Vec<FoundWord> {
+    fn finds_words_in_starting_from(
+        &self,
+        dict_path: &str,
+        start: Position,
+        bar: &ProgressBar,
+    ) -> Vec<FoundWord> {
+        let mut dict = Dictionary::new(dict_path);
         let mut path = Vec::new();
         path.push(start.clone());
 
         let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
-        let words = self._find_word(&start, &mut path, &path_str, dict, bar);
+        let words = self._find_word(&start, &mut path, &path_str, &mut dict, bar);
         bar.inc(1);
         words
     }

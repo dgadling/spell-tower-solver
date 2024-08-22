@@ -3,65 +3,52 @@ use rusqlite::{Connection, Statement};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::path::Path;
 
 pub struct Dictionary {
-    source_file: String,
-    words_db_path: String,
-    min_word_len: usize,
     conn: rusqlite::Connection,
     word_cache: HashMap<String, bool>,
     path_cache: HashMap<String, bool>,
 }
 
 impl Dictionary {
-    pub fn new(src: &str, db_path: &str, min_word_len: usize) -> Self {
+    pub fn new(db_path: &str) -> Self {
         let conn = Connection::open(db_path)
             .unwrap_or_else(|e| panic!("Couldn't open {}: {}", db_path, e));
 
-        let us = Dictionary {
-            source_file: src.to_string(),
-            words_db_path: db_path.to_string(),
-            min_word_len,
+        Dictionary {
             conn,
             word_cache: HashMap::new(),
             path_cache: HashMap::new(),
+        }
+    }
+
+    pub fn init_from(&self, source_file: &str, min_word_len: usize) {
+        println!("Checking database integrity");
+        let rows_res = self.conn.query_row("SELECT count(*) FROM words", [], |r| {
+            r.get::<usize, usize>(0)
+        });
+
+        match rows_res {
+            Ok(count) => {
+                println!("Look at the db and found {} rows", count);
+                if count > 369_000 {
+                    println!("Sounds about right");
+                    return;
+                }
+            }
+            _ => {}
         };
 
-        us.init();
-
-        us
-    }
-
-    fn init(&self) {
-        if Path::new(&self.words_db_path).exists() {
-            println!("Checking database integrity");
-            let rows_res = self.conn.query_row("SELECT count(*) FROM words", [], |r| {
-                r.get::<usize, usize>(0)
-            });
-
-            match rows_res {
-                Ok(count) => {
-                    println!("Look at the db and found {} rows", count);
-                    if count > 369_000 {
-                        println!("Sounds about right");
-                        return;
-                    }
-                }
-                _ => {}
-            };
-        }
-
         println!("That doesn't look right. Trying to load data.");
-        self.init_db();
+        self.init_db(source_file, min_word_len);
     }
 
-    fn init_db(&self) {
+    fn init_db(&self, source_file: &str, min_word_len: usize) {
         println!(
             "Creating database of valid words from {}",
-            &self.source_file
+            source_file
         );
-        let in_lines = io::BufReader::new(File::open(&self.source_file).expect("Couldn't read?!"))
+        let in_lines = io::BufReader::new(File::open(source_file).expect("Couldn't read?!"))
             .lines()
             .map(|l| l.unwrap());
 
@@ -84,7 +71,7 @@ impl Dictionary {
             .execute("BEGIN TRANSACTION", ())
             .unwrap_or_else(|e| panic!("Couldn't even start a transaction: {}", e));
         in_lines
-            .filter(|l| l.len() >= self.min_word_len)
+            .filter(|l| l.len() >= min_word_len)
             .for_each(|w| {
                 self.conn
                     .execute(
