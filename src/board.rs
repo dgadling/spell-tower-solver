@@ -48,9 +48,9 @@ impl Board {
 
         let mut words = thread::scope(|s| {
             let mut thread_res = Vec::new();
-            for row in 0..2 {
+            for row in 0..self.height + 1 {
                 println!("Getting row {} going", row);
-                for col in 0..self.width {
+                for col in 0..self.width + 1 {
                     thread_res.push(s.spawn(move |_| {
                         let start = Position::new(row, col);
                         self.finds_words_in_starting_from(&dict_path, start)
