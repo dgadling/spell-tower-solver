@@ -52,41 +52,35 @@ impl Board {
         // let us = Arc::new(self);
         // let d_path = Arc::new(dict_path);
 
-        let scope_res = thread::scope(|s| {
+        let mut words = thread::scope(|s| {
             // let bar = ProgressBar::new(self.width as u64);
             let mut thread_res = Vec::new();
-            // for row in 0..self.height {
             for row in 0..1 {
                 // bar.set_prefix(format!("Row {:>2}/{:>02}", row, self.height));
                 // bar.set_style(
                 //     ProgressStyle::with_template("{prefix} {wide_bar} {pos}/{len}").unwrap(),
                 // );
-                thread_res.push(s.spawn(move |_| {
-                    let mut t_words = Vec::new();
-                    // for col in 0..self.width {
-                    for col in 0..1 {
+                for col in 0..self.width {
+                    thread_res.push(s.spawn(move |_| {
                         // let t_board = Arc::clone(&us);
                         // let t_bar = Arc::clone(&bar);
                         // let t_dpath = Arc::clone(&d_path);
                         let start = Position::new(row, col);
-                        let words = self.finds_words_in_starting_from(&dict_path, start); //, &bar);
-                                                                                          // bar.inc(1);
-                        if !words.is_empty() {
-                            t_words.extend(words);
-                        }
-                    }
-                    t_words
-                }));
+                        self.finds_words_in_starting_from(&dict_path, start) //, &bar);
+                                                                             // bar.inc(1);
+                    }));
+                }
                 // bar.finish();
             }
+            println!("Done spawning threads");
             thread_res
-                .iter()
+                .into_iter()
                 .map(|th| th.join().unwrap())
                 .flatten()
                 .collect::<Vec<FoundWord>>()
-        });
+        })
+        .unwrap();
 
-        let mut words = scope_res.unwrap();
         println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
 
         println!("Found {} words! Here's the 15 longest", words.len());
@@ -104,6 +98,11 @@ impl Board {
         start: Position,
         // bar: &ProgressBar,
     ) -> Vec<FoundWord> {
+        println!(
+            "{:?}: Trying to find words starting at {:?}",
+            SystemTime::now(),
+            start
+        );
         let mut dict = Dictionary::new(dict_path);
         let mut path = Vec::new();
         path.push(start.clone());
@@ -111,6 +110,12 @@ impl Board {
         let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
         let words = self._find_word(&start, &mut path, &path_str, &mut dict); //, bar);
                                                                               // bar.inc(1);
+        println!(
+            "{:?}: Starting at {:?} found {} words",
+            SystemTime::now(),
+            start,
+            words.len()
+        );
         words
     }
 
