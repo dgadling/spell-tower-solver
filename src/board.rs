@@ -1,5 +1,4 @@
 use indicatif::{ProgressBar, ProgressStyle};
-use phf::{phf_map, phf_set};
 use std::fmt;
 use std::time::SystemTime;
 
@@ -32,6 +31,7 @@ impl Board {
         }
     }
 
+    /*
     pub fn score_for(tiles: &Vec<Tile>) -> u32 {
         let base = tiles
             .iter()
@@ -41,6 +41,7 @@ impl Board {
         let multiplier = tiles.iter().map(|t| t.multiplier).product::<u32>();
         base * multiplier * tiles.len() as u32
     }
+    */
 
     pub fn find_words(&self, dict: &mut Dictionary) {
         let now = SystemTime::now();
@@ -240,6 +241,7 @@ impl Position {
     }
 }
 
+/*
 pub struct Tile {
     letter: String,
     multiplier: u32,
@@ -254,6 +256,7 @@ impl Tile {
     }
 }
 
+use phf::{phf_map, phf_set};
 static CLEARS_ROW: phf::Set<&'static str> = phf_set!("j", "q", "x", "z");
 
 // Taken from https://en.wikipedia.org/wiki/Scrabble_letter_distributions
@@ -285,3 +288,4 @@ static LETTER_SCORES: phf::Map<&'static str, u32> = phf_map! {
     "y" => 4,
     "z" => 10,
 };
+*/

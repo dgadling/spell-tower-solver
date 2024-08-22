@@ -1,9 +1,10 @@
 mod board;
 pub mod dictionary;
 
-use board::{Board, Tile};
+use board::Board;
 use dictionary::Dictionary;
 
+/*
 fn dictionary_tests(dict: &mut Dictionary) {
     let mut foo = dict.get_candidates_for("pin", &vec!["c", "f", "u", "s", "n", "e"]);
     println!("Candidates for pin = {:?}", &foo);
@@ -48,6 +49,7 @@ fn scoring_tests() {
     println!("Score for squalid = {}", Board::score_for(&squalid));
     println!("Score for swan = {}", Board::score_for(&swan));
 }
+*/
 
 fn board_tests(dict: &mut Dictionary) {
     let sample_board = vec![
