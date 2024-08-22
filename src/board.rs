@@ -1,8 +1,5 @@
 use crossbeam::thread;
-use indicatif::{ProgressBar, ProgressStyle};
 use std::fmt;
-use std::sync::Arc;
-use std::thread::scope;
 use std::time::SystemTime;
 
 use crate::dictionary::Dictionary;
@@ -49,30 +46,18 @@ impl Board {
     pub fn find_words(&self, dict_path: &str) {
         let now = SystemTime::now();
 
-        // let us = Arc::new(self);
-        // let d_path = Arc::new(dict_path);
-
         let mut words = thread::scope(|s| {
-            // let bar = ProgressBar::new(self.width as u64);
             let mut thread_res = Vec::new();
-            for row in 0..1 {
-                // bar.set_prefix(format!("Row {:>2}/{:>02}", row, self.height));
-                // bar.set_style(
-                //     ProgressStyle::with_template("{prefix} {wide_bar} {pos}/{len}").unwrap(),
-                // );
+            for row in 0..2 {
+                println!("Getting row {} going", row);
                 for col in 0..self.width {
                     thread_res.push(s.spawn(move |_| {
-                        // let t_board = Arc::clone(&us);
-                        // let t_bar = Arc::clone(&bar);
-                        // let t_dpath = Arc::clone(&d_path);
                         let start = Position::new(row, col);
-                        self.finds_words_in_starting_from(&dict_path, start) //, &bar);
-                                                                             // bar.inc(1);
+                        self.finds_words_in_starting_from(&dict_path, start)
                     }));
                 }
-                // bar.finish();
             }
-            println!("Done spawning threads");
+
             thread_res
                 .into_iter()
                 .map(|th| th.join().unwrap())
@@ -85,38 +70,20 @@ impl Board {
 
         println!("Found {} words! Here's the 15 longest", words.len());
         words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
-        for fwd in &words[..2] {
+        for fwd in &words[..15] {
             println!("  {} via {:?}", fwd.word, fwd.path);
         }
 
         println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
     }
 
-    fn finds_words_in_starting_from(
-        &self,
-        dict_path: &str,
-        start: Position,
-        // bar: &ProgressBar,
-    ) -> Vec<FoundWord> {
-        println!(
-            "{:?}: Trying to find words starting at {:?}",
-            SystemTime::now(),
-            start
-        );
+    fn finds_words_in_starting_from(&self, dict_path: &str, start: Position) -> Vec<FoundWord> {
         let mut dict = Dictionary::new(dict_path);
         let mut path = Vec::new();
         path.push(start.clone());
 
         let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
-        let words = self._find_word(&start, &mut path, &path_str, &mut dict); //, bar);
-                                                                              // bar.inc(1);
-        println!(
-            "{:?}: Starting at {:?} found {} words",
-            SystemTime::now(),
-            start,
-            words.len()
-        );
-        words
+        self._find_word(&start, &mut path, &path_str, &mut dict)
     }
 
     fn _find_word(
@@ -125,7 +92,6 @@ impl Board {
         path: &mut Vec<Position>,
         path_str: &String,
         dict: &mut Dictionary,
-        // bar: &ProgressBar,
     ) -> Vec<FoundWord> {
         /*
         We have arrived at pos. From here we need to
@@ -146,11 +112,9 @@ impl Board {
 
         let candidate_positions = pos.neighbors(self.width, self.height);
 
-        //bar.inc_length(candidate_positions.len() as u64);
         for p in candidate_positions {
             // Can't cross our existing path
             if path.contains(&p) {
-                // bar.inc(1);
                 continue;
             }
 
@@ -158,7 +122,6 @@ impl Board {
 
             if l.eq("") || l.eq(".") {
                 // This tile is a dead-end, no need to keep looking
-                // bar.inc(1);
                 continue;
             }
 
@@ -171,11 +134,9 @@ impl Board {
                 if !found.is_empty() {
                     found_words.extend(found);
                 }
-                // bar.inc(1);
             }
         }
 
-        // bar.inc(1);
         found_words
     }
 }
