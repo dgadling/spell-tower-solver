@@ -2,7 +2,7 @@ use indicatif::ProgressBar;
 use rusqlite::{Connection, Statement};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufRead};
+use std::io::{BufRead, BufReader};
 
 pub struct Dictionary {
     conn: rusqlite::Connection,
@@ -44,11 +44,8 @@ impl Dictionary {
     }
 
     fn init_db(&self, source_file: &str, min_word_len: usize) {
-        println!(
-            "Creating database of valid words from {}",
-            source_file
-        );
-        let in_lines = io::BufReader::new(File::open(source_file).expect("Couldn't read?!"))
+        println!("Creating database of valid words from {}", source_file);
+        let in_lines = BufReader::new(File::open(source_file).expect("Couldn't read?!"))
             .lines()
             .map(|l| l.unwrap());
 
@@ -70,17 +67,15 @@ impl Dictionary {
         self.conn
             .execute("BEGIN TRANSACTION", ())
             .unwrap_or_else(|e| panic!("Couldn't even start a transaction: {}", e));
-        in_lines
-            .filter(|l| l.len() >= min_word_len)
-            .for_each(|w| {
-                self.conn
-                    .execute(
-                        "INSERT INTO words (word, base_points) VALUES (?1, ?2)",
-                        (&w, 1),
-                    )
-                    .unwrap_or_else(|e| panic!("Couldn't insert {} into the database: {}", w, e));
-                bar.inc(1)
-            });
+        in_lines.filter(|l| l.len() >= min_word_len).for_each(|w| {
+            self.conn
+                .execute(
+                    "INSERT INTO words (word, base_points) VALUES (?1, ?2)",
+                    (&w, 1),
+                )
+                .unwrap_or_else(|e| panic!("Couldn't insert {} into the database: {}", w, e));
+            bar.inc(1)
+        });
         bar.finish();
         self.conn
             .execute("COMMIT", ())
@@ -108,14 +103,11 @@ impl Dictionary {
     }
 
     pub fn has_path(&mut self, prefix: &str) -> bool {
-        if let Some(ans) = self.path_cache.get(prefix){
+        if let Some(ans) = self.path_cache.get(prefix) {
             return *ans;
         }
 
-        let query = format!(
-            "SELECT COUNT(*) FROM words WHERE word LIKE '{}%'",
-            prefix
-        );
+        let query = format!("SELECT COUNT(*) FROM words WHERE word LIKE '{}%'", prefix);
 
         let word_count = self
             .conn
@@ -127,7 +119,7 @@ impl Dictionary {
     }
 
     pub fn is_word(&mut self, prefix: &str) -> bool {
-        if let Some(ans) = self.word_cache.get(prefix){
+        if let Some(ans) = self.word_cache.get(prefix) {
             return *ans;
         }
 
