@@ -1,13 +1,13 @@
 use crossbeam::thread;
-use std::fmt;
-use std::time::SystemTime;
+use std::{collections::HashMap, fmt};
 
 use crate::dictionary::Dictionary;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FoundWord {
-    path: Vec<Position>,
-    word: String,
+    pub path: Vec<Position>,
+    pub word: String,
+    pub score: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,7 +15,7 @@ pub struct Board {
     width: usize,
     height: usize,
     tiles: Vec<Vec<String>>,
-    multipliers: Vec<(usize, usize)>,
+    multipliers: Vec<Position>,
 }
 
 impl Board {
@@ -27,29 +27,17 @@ impl Board {
             width,
             height,
             tiles,
-            multipliers,
+            multipliers: multipliers
+                .iter()
+                .map(|p| Position::new(p.0, p.1))
+                .collect(),
         }
     }
 
-    /*
-    pub fn score_for(tiles: &Vec<Tile>) -> u32 {
-        let base = tiles
-            .iter()
-            .map(|t| LETTER_SCORES.get(&t.letter).cloned().unwrap() * t.multiplier)
-            .sum::<u32>();
-
-        let multiplier = tiles.iter().map(|t| t.multiplier).product::<u32>();
-        base * multiplier * tiles.len() as u32
-    }
-    */
-
-    pub fn find_words(&self, dict_path: &str) {
-        let now = SystemTime::now();
-
-        let mut words = thread::scope(|s| {
+    pub fn find_words(&self, dict_path: &str) -> HashMap<String, Vec<Vec<Position>>> {
+        let found_words = thread::scope(|s| {
             let mut thread_res = Vec::new();
             for row in 0..self.height + 1 {
-                println!("Getting row {} going", row);
                 for col in 0..self.width + 1 {
                     thread_res.push(s.spawn(move |_| {
                         let start = Position::new(row, col);
@@ -66,15 +54,13 @@ impl Board {
         })
         .unwrap();
 
-        println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
+        let mut word_paths = HashMap::new();
 
-        println!("Found {} words! Here's the 15 longest", words.len());
-        words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
-        for fwd in &words[..15] {
-            println!("  {} via {:?}", fwd.word, fwd.path);
+        for found_word in found_words {
+            let paths = word_paths.entry(found_word.word).or_insert(Vec::new());
+            paths.push(found_word.path);
         }
-
-        println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
+        word_paths
     }
 
     fn finds_words_in_starting_from(&self, dict_path: &str, start: Position) -> Vec<FoundWord> {
@@ -107,6 +93,7 @@ impl Board {
             found_words.push(FoundWord {
                 path: path.clone(),
                 word: path_str.clone(),
+                score: path_str.len() as u32,
             });
         }
 
@@ -130,7 +117,7 @@ impl Board {
                 let mut next_path = path.clone();
                 next_path.push(p.clone());
 
-                let found = self._find_word(&p, &mut next_path, &fragment, dict); //, bar);
+                let found = self._find_word(&p, &mut next_path, &fragment, dict);
                 if !found.is_empty() {
                     found_words.extend(found);
                 }
@@ -238,20 +225,6 @@ impl Position {
 }
 
 /*
-pub struct Tile {
-    letter: String,
-    multiplier: u32,
-}
-
-impl Tile {
-    pub fn new(letter: &str, multiplier: u32) -> Self {
-        Self {
-            letter: letter.to_string(),
-            multiplier,
-        }
-    }
-}
-
 use phf::{phf_map, phf_set};
 static CLEARS_ROW: phf::Set<&'static str> = phf_set!("j", "q", "x", "z");
 

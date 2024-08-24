@@ -1,5 +1,5 @@
 use indicatif::ProgressBar;
-use rusqlite::{Connection, Statement};
+use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -54,12 +54,13 @@ impl Dictionary {
         self.conn
             .execute(
                 "
-            CREATE TABLE words (
-                id INTEGER PRIMARY KEY,
-                word TEXT NOT NULL,
-                base_points INTEGER,
-                UNIQUE(word)
-            )",
+                CREATE TABLE words (
+                    id INTEGER PRIMARY KEY,
+                    word TEXT NOT NULL,
+                    base_points INTEGER,
+                    UNIQUE(word)
+                )
+                ",
                 (),
             )
             .unwrap_or_else(|e| panic!("Couldn't create base table: {}", e));
@@ -81,37 +82,18 @@ impl Dictionary {
             .execute("COMMIT", ())
             .unwrap_or_else(|e| panic!("Couldn't commit the transaction: {}", e));
 
-        println!("Creating an index");
+        println!("Optimizing");
         self.conn
-            .execute("CREATE INDEX words_word ON words(word)", ())
-            .unwrap_or_else(|e| panic!("Failed to create index: {}", e));
-
-        println!("Creating the FTS5 table");
-        self.conn
-            .execute("CREATE VIRTUAL TABLE optimized_words USING FTS5(word)", ())
-            .unwrap();
-        self.conn
-            .execute(
-                "INSERT INTO optimized_words(word) SELECT word FROM words",
-                (),
+            .execute_batch(
+                "
+                CREATE INDEX words_word ON words(word);
+                CREATE VIRTUAL TABLE optimized_words USING FTS5(word);
+                INSERT INTO optimized_words(word) SELECT word FROM words;
+                ",
             )
-            .unwrap();
+            .unwrap_or_else(|e| panic!("Failed to optimize: {}", e));
 
         println!("Done init-ing!");
-    }
-
-    fn get_query_for(&mut self, options_len: usize) -> Statement {
-        let placeholders = std::iter::repeat("?")
-            .take(options_len)
-            .collect::<Vec<_>>()
-            .join(", ");
-
-        self.conn
-            .prepare(&format!(
-                "SELECT DISTINCT substr(word, ?, 1) FROM words WHERE substr(word, 1, ?) IN ({})",
-                placeholders
-            ))
-            .expect("Couldn't prepare a statement?!")
     }
 
     pub fn has_path(&mut self, prefix: &str) -> bool {
@@ -148,26 +130,5 @@ impl Dictionary {
 
         self.word_cache.insert(prefix.to_string(), word.is_ok());
         word.is_ok()
-    }
-
-    pub fn get_candidates_for(&mut self, prefix: &str, options: &Vec<&str>) -> Vec<String> {
-        let mut stmt = self.get_query_for(options.len());
-
-        stmt.raw_bind_parameter(1, prefix.len() + 1).unwrap();
-        stmt.raw_bind_parameter(2, prefix.len() + 1).unwrap();
-
-        for option_idx in 0..options.len() {
-            let to_bind = prefix.to_owned() + options.get(option_idx).unwrap();
-            stmt.raw_bind_parameter(option_idx + 3, to_bind).unwrap();
-        }
-
-        let mut rows = stmt.raw_query();
-        let mut candidates = Vec::new();
-        while let Some(row) = rows.next().unwrap() {
-            let foo: String = row.get_unwrap(0);
-            candidates.push(foo);
-        }
-
-        return candidates;
     }
 }

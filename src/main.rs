@@ -71,7 +71,12 @@ fn board_tests(dict_path: &str) {
     let mult_locs: Vec<(usize, usize)> = vec![(0, 8), (1, 2), (9, 6)];
 
     let b = Board::new_from(sample_board, mult_locs);
-    b.find_words(dict_path);
+    let found_words = b.find_words(dict_path);
+    println!("Found {} words! Here's the first 15!", found_words.len());
+    for (word, paths) in found_words.into_iter().take(15) {
+        println!("  {} via {:?}", word, paths);
+    }
+
 }
 
 fn main() {
