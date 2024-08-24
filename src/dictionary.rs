@@ -85,6 +85,18 @@ impl Dictionary {
         self.conn
             .execute("CREATE INDEX words_word ON words(word)", ())
             .unwrap_or_else(|e| panic!("Failed to create index: {}", e));
+
+        println!("Creating the FTS5 table");
+        self.conn
+            .execute("CREATE VIRTUAL TABLE optimized_words USING FTS5(word)", ())
+            .unwrap();
+        self.conn
+            .execute(
+                "INSERT INTO optimized_words(word) SELECT word FROM words",
+                (),
+            )
+            .unwrap();
+
         println!("Done init-ing!");
     }
 
@@ -107,15 +119,19 @@ impl Dictionary {
             return *ans;
         }
 
-        let query = format!("SELECT COUNT(*) FROM words WHERE word LIKE '{}%'", prefix);
+        // NOTE: Using the FTS5 table for prefix matching is SEVERAL ORDERS OF MAGNITUDE faster!
+        let query = format!(
+            "SELECT 1 FROM optimized_words WHERE word MATCH '{}*'",
+            prefix
+        );
 
-        let word_count = self
+        let word_found = self
             .conn
-            .query_row(&query, [], |row| row.get(0) as Result<u32, rusqlite::Error>)
-            .unwrap();
+            .query_row(&query, [], |row| row.get(0) as Result<u32, rusqlite::Error>);
 
-        self.path_cache.insert(prefix.to_string(), word_count > 0);
-        word_count > 0
+        self.path_cache
+            .insert(prefix.to_string(), word_found.is_ok());
+        word_found.is_ok()
     }
 
     pub fn is_word(&mut self, prefix: &str) -> bool {
@@ -123,6 +139,7 @@ impl Dictionary {
             return *ans;
         }
 
+        // NOTE: Going the normaly route is SIGNIFICANTLY faster for straight equality checking
         let query = format!("SELECT word FROM words WHERE word = '{}'", prefix);
 
         let word = self.conn.query_row(&query, [], |row| {
