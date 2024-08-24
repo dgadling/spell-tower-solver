@@ -1,3 +1,5 @@
+use std::time::SystemTime;
+
 mod board;
 pub mod dictionary;
 
@@ -71,12 +73,16 @@ fn board_tests(dict_path: &str) {
     let mult_locs: Vec<(usize, usize)> = vec![(0, 8), (1, 2), (9, 6)];
 
     let b = Board::new_from(sample_board, mult_locs);
+    let now = SystemTime::now();
     let found_words = b.find_words(dict_path);
-    println!("Found {} words! Here's the first 15!", found_words.len());
+    println!(
+        "Found {} words in {}ms! Here's the first 15!",
+        found_words.len(),
+        now.elapsed().unwrap().as_millis()
+    );
     for (word, paths) in found_words.into_iter().take(15) {
         println!("  {} via {:?}", word, paths);
     }
-
 }
 
 fn main() {
