@@ -1,9 +1,12 @@
+use std::time::SystemTime;
+
 mod board;
 pub mod dictionary;
 
-use board::{Board, Tile};
+use board::Board;
 use dictionary::Dictionary;
 
+/*
 fn dictionary_tests(dict: &mut Dictionary) {
     let mut foo = dict.get_candidates_for("pin", &vec!["c", "f", "u", "s", "n", "e"]);
     println!("Candidates for pin = {:?}", &foo);
@@ -48,8 +51,9 @@ fn scoring_tests() {
     println!("Score for squalid = {}", Board::score_for(&squalid));
     println!("Score for swan = {}", Board::score_for(&swan));
 }
+*/
 
-fn board_tests(dict: &mut Dictionary) {
+fn board_tests(dict_path: &str) {
     let sample_board = vec![
         "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
         "mcisneice".chars().map(|c| c.to_string()).collect(),
@@ -69,14 +73,25 @@ fn board_tests(dict: &mut Dictionary) {
     let mult_locs: Vec<(usize, usize)> = vec![(0, 8), (1, 2), (9, 6)];
 
     let b = Board::new_from(sample_board, mult_locs);
-    b.find_words(dict);
+    let now = SystemTime::now();
+    let found_words = b.find_words(dict_path);
+    println!(
+        "Found {} words in {}ms! Here's the first 15!",
+        found_words.len(),
+        now.elapsed().unwrap().as_millis()
+    );
+    for (word, paths) in found_words.into_iter().take(15) {
+        println!("  {} via {:?}", word, paths);
+    }
 }
 
 fn main() {
-    let mut dict = Dictionary::new("words_alpha.txt", "dictionary.db", 3);
+    let dictionary_db_name = "dictionary.db";
+    let dict = Dictionary::new(&dictionary_db_name);
+    dict.init_from("words_alpha.txt", 3);
     /*
     dictionary_tests(&mut dict);
     scoring_tests();
     */
-    board_tests(&mut dict);
+    board_tests(dictionary_db_name);
 }

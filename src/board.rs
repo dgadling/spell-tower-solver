@@ -1,14 +1,13 @@
-use indicatif::{ProgressBar, ProgressStyle};
-use phf::{phf_map, phf_set};
-use std::fmt;
-use std::time::SystemTime;
+use crossbeam::thread;
+use std::{collections::HashMap, fmt};
 
 use crate::dictionary::Dictionary;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FoundWord {
-    path: Vec<Position>,
-    word: String,
+    pub path: Vec<Position>,
+    pub word: String,
+    pub score: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,7 +15,7 @@ pub struct Board {
     width: usize,
     height: usize,
     tiles: Vec<Vec<String>>,
-    multipliers: Vec<(usize, usize)>,
+    multipliers: Vec<Position>,
 }
 
 impl Board {
@@ -28,51 +27,49 @@ impl Board {
             width,
             height,
             tiles,
-            multipliers,
+            multipliers: multipliers
+                .iter()
+                .map(|p| Position::new(p.0, p.1))
+                .collect(),
         }
     }
 
-    pub fn score_for(tiles: &Vec<Tile>) -> u32 {
-        let base = tiles
-            .iter()
-            .map(|t| LETTER_SCORES.get(&t.letter).cloned().unwrap() * t.multiplier)
-            .sum::<u32>();
-
-        let multiplier = tiles.iter().map(|t| t.multiplier).product::<u32>();
-        base * multiplier * tiles.len() as u32
-    }
-
-    pub fn find_words(&self, dict: &mut Dictionary) {
-        let now = SystemTime::now();
-        let mut found_words = Vec::new();
-        // for row in 0..self.height {
-        for row in 0..1 {
-            let bar = ProgressBar::new(self.width as u64);
-            bar.set_prefix(format!("Row {:>2}/{:>02}", row, self.height));
-            bar.set_style(ProgressStyle::with_template("{prefix} {wide_bar} {pos}/{len}").unwrap());
-            for col in 0..self.width {
-                let start = Position::new(row, col);
-                let mut path = Vec::new();
-                path.push(start.clone());
-
-                let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
-                let words = self._find_word(&start, &mut path, &path_str, dict, &bar);
-                if !words.is_empty() {
-                    found_words.extend(words);
+    pub fn find_words(&self, dict_path: &str) -> HashMap<String, Vec<Vec<Position>>> {
+        let found_words = thread::scope(|s| {
+            let mut thread_res = Vec::new();
+            for row in 0..self.height + 1 {
+                for col in 0..self.width + 1 {
+                    thread_res.push(s.spawn(move |_| {
+                        let start = Position::new(row, col);
+                        self.finds_words_in_starting_from(&dict_path, start)
+                    }));
                 }
-                bar.inc(1);
             }
-            bar.finish();
-        }
-        println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
 
-        println!("Found {} words! Here's the 15 longest", found_words.len());
-        found_words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
-        for fwd in &found_words[..2] {
-            println!("  {} via {:?}", fwd.word, fwd.path);
-        }
+            thread_res
+                .into_iter()
+                .map(|th| th.join().unwrap())
+                .flatten()
+                .collect::<Vec<FoundWord>>()
+        })
+        .unwrap();
 
-        println!("Finished after {}ms", now.elapsed().unwrap().as_millis());
+        let mut word_paths = HashMap::new();
+
+        for found_word in found_words {
+            let paths = word_paths.entry(found_word.word).or_insert(Vec::new());
+            paths.push(found_word.path);
+        }
+        word_paths
+    }
+
+    fn finds_words_in_starting_from(&self, dict_path: &str, start: Position) -> Vec<FoundWord> {
+        let mut dict = Dictionary::new(dict_path);
+        let mut path = Vec::new();
+        path.push(start.clone());
+
+        let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
+        self._find_word(&start, &mut path, &path_str, &mut dict)
     }
 
     fn _find_word(
@@ -81,7 +78,6 @@ impl Board {
         path: &mut Vec<Position>,
         path_str: &String,
         dict: &mut Dictionary,
-        bar: &ProgressBar,
     ) -> Vec<FoundWord> {
         /*
         We have arrived at pos. From here we need to
@@ -97,16 +93,15 @@ impl Board {
             found_words.push(FoundWord {
                 path: path.clone(),
                 word: path_str.clone(),
+                score: path_str.len() as u32,
             });
         }
 
         let candidate_positions = pos.neighbors(self.width, self.height);
 
-        bar.inc_length(candidate_positions.len() as u64);
         for p in candidate_positions {
             // Can't cross our existing path
             if path.contains(&p) {
-                bar.inc(1);
                 continue;
             }
 
@@ -114,7 +109,6 @@ impl Board {
 
             if l.eq("") || l.eq(".") {
                 // This tile is a dead-end, no need to keep looking
-                bar.inc(1);
                 continue;
             }
 
@@ -123,15 +117,13 @@ impl Board {
                 let mut next_path = path.clone();
                 next_path.push(p.clone());
 
-                let found = self._find_word(&p, &mut next_path, &fragment, dict, bar);
+                let found = self._find_word(&p, &mut next_path, &fragment, dict);
                 if !found.is_empty() {
                     found_words.extend(found);
                 }
-                bar.inc(1);
             }
         }
 
-        bar.inc(1);
         found_words
     }
 }
@@ -232,20 +224,8 @@ impl Position {
     }
 }
 
-pub struct Tile {
-    letter: String,
-    multiplier: u32,
-}
-
-impl Tile {
-    pub fn new(letter: &str, multiplier: u32) -> Self {
-        Self {
-            letter: letter.to_string(),
-            multiplier,
-        }
-    }
-}
-
+/*
+use phf::{phf_map, phf_set};
 static CLEARS_ROW: phf::Set<&'static str> = phf_set!("j", "q", "x", "z");
 
 // Taken from https://en.wikipedia.org/wiki/Scrabble_letter_distributions
@@ -277,3 +257,4 @@ static LETTER_SCORES: phf::Map<&'static str, u32> = phf_map! {
     "y" => 4,
     "z" => 10,
 };
+*/
