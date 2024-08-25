@@ -27,13 +27,14 @@ pub fn board_tests(dict_path: &str) {
 
     let b = Board::new_from(sample_board, mult_locs);
     let now = SystemTime::now();
-    let found_words = b.find_words(dict_path);
+    let mut found_words = b.find_words(dict_path);
     println!(
         "Found {} words in {}ms! Here's the highest scoring 15!",
         found_words.len(),
         now.elapsed().unwrap().as_millis()
     );
-    for (word, paths) in found_words.into_iter().take(15) {
-        println!("  {} via {:?}", word, paths);
+    found_words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
+    for found_word in found_words.into_iter().take(15) {
+        println!("  {} via {:?}", found_word.word, found_word.path);
     }
 }

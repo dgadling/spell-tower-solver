@@ -1,6 +1,5 @@
-use crossbeam::thread;
 use phf::phf_map;
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 use crate::dictionary::Dictionary;
 
@@ -66,33 +65,16 @@ impl Board {
         }
     }
 
-    pub fn find_words(&self, dict_path: &str) -> HashMap<String, Vec<Vec<Position>>> {
-        let found_words = thread::scope(|s| {
-            let mut thread_res = Vec::new();
-            for row in 0..self.height + 1 {
-                for col in 0..self.width + 1 {
-                    thread_res.push(s.spawn(move |_| {
-                        let start = Position::new(row, col);
-                        self.finds_words_in_starting_from(&dict_path, start)
-                    }));
-                }
+    pub fn find_words(&self, dict_path: &str) -> Vec<FoundWord> {
+        let mut found_words = Vec::new();
+        for row in 0..self.height + 1 {
+            for col in 0..self.width + 1 {
+                let start = Position::new(row, col);
+                found_words.extend(self.finds_words_in_starting_from(&dict_path, start));
             }
-
-            thread_res
-                .into_iter()
-                .map(|th| th.join().unwrap())
-                .flatten()
-                .collect::<Vec<FoundWord>>()
-        })
-        .unwrap();
-
-        let mut word_paths = HashMap::new();
-
-        for found_word in found_words {
-            let paths = word_paths.entry(found_word.word).or_insert(Vec::new());
-            paths.push(found_word.path);
         }
-        word_paths
+
+        found_words
     }
 
     fn finds_words_in_starting_from(&self, dict_path: &str, start: Position) -> Vec<FoundWord> {
