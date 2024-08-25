@@ -47,6 +47,7 @@ pub struct Board {
     height: usize,
     tiles: Vec<Vec<String>>,
     multipliers: Vec<Position>,
+    words: Option<Vec<FoundWord>>,
 }
 
 impl Board {
@@ -62,10 +63,11 @@ impl Board {
                 .iter()
                 .map(|p| Position::new(p.0, p.1))
                 .collect(),
+            words: None,
         }
     }
 
-    pub fn find_words(&self, dict_path: &str) -> Vec<FoundWord> {
+    pub fn find_words(&self, dict_path: &str) {
         let mut found_words = Vec::new();
         for row in 0..self.height + 1 {
             for col in 0..self.width + 1 {
@@ -74,8 +76,13 @@ impl Board {
             }
         }
 
-        found_words
+        found_words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
+        self.words = found_words
     }
+
+    pub fn is_terminal(&self) -> bool {
+        self.words.is_some()
+    }   
 
     fn finds_words_in_starting_from(&self, dict_path: &str, start: Position) -> Vec<FoundWord> {
         let mut dict = Dictionary::new(dict_path);
