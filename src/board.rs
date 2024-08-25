@@ -1,7 +1,39 @@
 use crossbeam::thread;
+use phf::phf_map;
 use std::{collections::HashMap, fmt};
 
 use crate::dictionary::Dictionary;
+
+// Taken from https://en.wikipedia.org/wiki/Scrabble_letter_distributions but
+// this is clearly not what's used in SpellTower.
+static LETTER_SCORES: phf::Map<char, u32> = phf_map! {
+    'a' => 1,
+    'b' => 3,
+    'c' => 3,
+    'd' => 2,
+    'e' => 1,
+    'f' => 4,
+    'g' => 2,
+    'h' => 4,
+    'i' => 1,
+    'j' => 8,
+    'k' => 5,
+    'l' => 1,
+    'm' => 3,
+    'n' => 1,
+    'o' => 1,
+    'p' => 3,
+    'q' => 10,
+    'r' => 1,
+    's' => 1,
+    't' => 1,
+    'u' => 1,
+    'v' => 4,
+    'w' => 4,
+    'x' => 8,
+    'y' => 4,
+    'z' => 10,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FoundWord {
@@ -93,7 +125,7 @@ impl Board {
             found_words.push(FoundWord {
                 path: path.clone(),
                 word: path_str.clone(),
-                score: path_str.len() as u32,
+                score: self.score_for(path_str, path),
             });
         }
 
@@ -125,6 +157,27 @@ impl Board {
         }
 
         found_words
+    }
+
+    fn score_for(&self, word: &str, path: &Vec<Position>) -> u32 {
+        // Base score is the sum of all of the letter values
+        let base_score = word
+            .chars()
+            .into_iter()
+            .map(|c| LETTER_SCORES.get(&c).unwrap())
+            .sum::<u32>();
+
+        /*
+          Multipliers stack and in tower mode are only ever 2x. So if you use
+          one of them the multiplier is 2. If you use two of them it's 4.
+          If you don't use any of them your multiplier is 1, which does nothing
+        */
+        let multiplier = path
+            .iter()
+            .map(|p| if self.multipliers.contains(p) { 2 } else { 1 })
+            .product::<u32>();
+
+        base_score * multiplier * word.len() as u32
     }
 }
 
@@ -223,38 +276,3 @@ impl Position {
         Some(c)
     }
 }
-
-/*
-use phf::{phf_map, phf_set};
-static CLEARS_ROW: phf::Set<&'static str> = phf_set!("j", "q", "x", "z");
-
-// Taken from https://en.wikipedia.org/wiki/Scrabble_letter_distributions
-static LETTER_SCORES: phf::Map<&'static str, u32> = phf_map! {
-    "a" => 1,
-    "b" => 3,
-    "c" => 3,
-    "d" => 2,
-    "e" => 1,
-    "f" => 4,
-    "g" => 2,
-    "h" => 4,
-    "i" => 1,
-    "j" => 8,
-    "k" => 5,
-    "l" => 1,
-    "m" => 3,
-    "n" => 1,
-    "o" => 1,
-    "p" => 3,
-    "q" => 10,
-    "r" => 1,
-    "s" => 1,
-    "t" => 1,
-    "u" => 1,
-    "v" => 4,
-    "w" => 4,
-    "x" => 8,
-    "y" => 4,
-    "z" => 10,
-};
-*/
