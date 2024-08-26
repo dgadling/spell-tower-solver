@@ -96,6 +96,7 @@ impl Board {
 
     pub const BLOCK: &'static str = ".";
     pub const EMPTY: &'static str = " ";
+    pub const DEBUG: &'static str = "*";
 
     pub fn words(&self) -> &Vec<FoundWord> {
         self.words.as_ref().unwrap()
@@ -181,7 +182,7 @@ impl Board {
 
                     tiles.get_mut(r).unwrap()[c] = above.clone();
                     tiles.get_mut(row).unwrap()[c] = Board::EMPTY.to_string();
-                    continue;
+                    break;
                 }
             }
         }
