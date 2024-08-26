@@ -84,6 +84,9 @@ impl Board {
         }
     }
 
+    pub const BLOCK: &'static str = ".";
+    pub const EMPTY: &'static str = " ";
+
     pub fn words(&self) -> &Vec<FoundWord> {
         self.words.as_ref().unwrap()
     }
@@ -96,24 +99,37 @@ impl Board {
         self.evolved_from.unwrap()
     }
 
+    pub fn get(&self, pos: &Position) -> String {
+        Board::_get(&self.tiles, pos)
+    }
+
+    fn _get(tiles: &Vec<Vec<String>>, pos: &Position) -> String {
+        tiles.get(pos.row).unwrap().get(pos.col).unwrap().clone()
+    }
+
     fn find_path_of_destruction(&self, found_word: FoundWord) -> Vec<Position> {
         let mut path_of_destruction = found_word.path.clone();
 
-        if path_of_destruction.len() >= 5 {
-            path_of_destruction.extend(
-                path_of_destruction
-                    .iter()
-                    .map(|p| {
-                        vec![
-                            p.north(self.width, self.height),
-                            p.south(self.width, self.height),
-                            p.east(self.width, self.height),
-                            p.west(self.width, self.height),
-                        ]
+        // Any blocks get destroyed if any block adjacent to them is destroyed
+        path_of_destruction.extend(
+            found_word
+                .path
+                .iter()
+                .map(|p| {
+                    p.cardinal_neighbors(self.width, self.height)
                         .into_iter()
-                        .flatten()
-                        .collect::<Vec<Position>>()
-                    })
+                        .filter(|p| self.get(p) == Board::BLOCK)
+                })
+                .flatten()
+                .collect::<Vec<Position>>(),
+        );
+
+        if found_word.path.len() >= 5 {
+            path_of_destruction.extend(
+                found_word
+                    .path
+                    .iter()
+                    .map(|p| p.cardinal_neighbors(self.width, self.height))
                     .flatten()
                     .collect::<Vec<Position>>(),
             );
@@ -129,10 +145,9 @@ impl Board {
             for col in 0..self.width + 1 {
                 let p = Position::new(row, col);
                 if path_of_destruction.contains(&p) {
-                    println!("Destroying {:?}", p);
-                    new_row.push(" ".to_string());
+                    new_row.push(Board::EMPTY.to_string());
                 } else {
-                    new_row.push(self.tiles.get(row).unwrap().get(col).unwrap().clone());
+                    new_row.push(self.get(&Position { row, col }));
                 }
             }
             new_tiles.push(new_row);
@@ -148,14 +163,14 @@ impl Board {
                     continue;
                 }
 
-                for row in (0..=r-1).rev() {
-                    let above = tiles.get(row).unwrap().get(c).unwrap().to_string();
+                for row in (0..=r - 1).rev() {
+                    let above = Board::_get(&tiles, &Position { row, col: c });
                     if above.eq(" ") {
                         continue;
                     }
 
                     tiles.get_mut(r).unwrap()[c] = above.clone();
-                    tiles.get_mut(row).unwrap()[c] = " ".to_string();
+                    tiles.get_mut(row).unwrap()[c] = Board::EMPTY.to_string();
                     continue;
                 }
             }
@@ -209,7 +224,10 @@ impl Board {
         let mut path = Vec::new();
         path.push(start.clone());
 
-        let path_str = self.tiles.get(start.row).unwrap().get(start.col).unwrap();
+        let path_str = self.get(&Position {
+            row: start.row,
+            col: start.col,
+        });
         self._find_word(&start, &mut path, &path_str, &mut dict)
     }
 
@@ -246,14 +264,14 @@ impl Board {
                 continue;
             }
 
-            let l = self.tiles.get(p.row).unwrap().get(p.col).unwrap();
+            let l = self.get(&p);
 
-            if l.eq("") || l.eq(".") || l.eq(" ") {
+            if l.eq(Board::BLOCK) || l.eq(Board::EMPTY) {
                 // This tile is a dead-end, no need to keep looking
                 continue;
             }
 
-            let fragment = path_str.clone() + l;
+            let fragment = path_str.clone() + &l;
             if dict.has_path(&fragment) {
                 let mut next_path = path.clone();
                 next_path.push(p.clone());
@@ -308,15 +326,29 @@ impl Position {
     }
 
     pub fn neighbors(&self, width: usize, height: usize) -> Vec<Position> {
+        let mut all_neighbors = self.cardinal_neighbors(width, height);
+
+        all_neighbors.extend(
+            vec![
+                self.north_west(width, height),
+                self.north_east(width, height),
+                self.south_west(width, height),
+                self.south_east(width, height),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<Position>>(),
+        );
+
+        all_neighbors
+    }
+
+    pub fn cardinal_neighbors(&self, width: usize, height: usize) -> Vec<Position> {
         vec![
-            self.north_west(width, height),
             self.north(width, height),
-            self.north_east(width, height),
             self.east(width, height),
             self.west(width, height),
-            self.south_west(width, height),
             self.south(width, height),
-            self.south_east(width, height),
         ]
         .into_iter()
         .flatten()
