@@ -34,20 +34,35 @@ static LETTER_SCORES: phf::Map<char, u32> = phf_map! {
     'z' => 10,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct FoundWord {
     pub path: Vec<Position>,
     pub word: String,
     pub score: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Board {
     width: usize,
     height: usize,
     tiles: Vec<Vec<String>>,
     multipliers: Vec<Position>,
     words: Option<Vec<FoundWord>>,
+    evolved_via: Option<usize>,
+    evolved_from: Option<u64>,
+}
+
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for row in 0..self.height + 1 {
+            for col in 0..self.width + 1 {
+                let c = self.tiles.get(row).unwrap().get(col).unwrap();
+                write!(f, "{}", c)?;
+            }
+            write!(f, "\n")?;
+        }
+        Ok(())
+    }
 }
 
 impl Board {
@@ -64,25 +79,130 @@ impl Board {
                 .map(|p| Position::new(p.0, p.1))
                 .collect(),
             words: None,
+            evolved_via: None,
+            evolved_from: None,
         }
     }
 
-    pub fn find_words(&self, dict_path: &str) {
+    pub fn words(&self) -> &Vec<FoundWord> {
+        self.words.as_ref().unwrap()
+    }
+
+    pub fn evolved_via(&self) -> usize {
+        self.evolved_via.unwrap()
+    }
+
+    pub fn evolved_from(&self) -> u64 {
+        self.evolved_from.unwrap()
+    }
+
+    fn find_path_of_destruction(&self, found_word: FoundWord) -> Vec<Position> {
+        let mut path_of_destruction = found_word.path.clone();
+
+        if path_of_destruction.len() >= 5 {
+            path_of_destruction.extend(
+                path_of_destruction
+                    .iter()
+                    .map(|p| {
+                        vec![
+                            p.north(self.width, self.height),
+                            p.south(self.width, self.height),
+                            p.east(self.width, self.height),
+                            p.west(self.width, self.height),
+                        ]
+                        .into_iter()
+                        .flatten()
+                        .collect::<Vec<Position>>()
+                    })
+                    .flatten()
+                    .collect::<Vec<Position>>(),
+            );
+        }
+
+        path_of_destruction
+    }
+
+    fn destroy_board(&self, path_of_destruction: &Vec<Position>) -> Vec<Vec<String>> {
+        let mut new_tiles = Vec::new();
+        for row in 0..self.height + 1 {
+            let mut new_row = Vec::new();
+            for col in 0..self.width + 1 {
+                let p = Position::new(row, col);
+                if path_of_destruction.contains(&p) {
+                    println!("Destroying {:?}", p);
+                    new_row.push(" ".to_string());
+                } else {
+                    new_row.push(self.tiles.get(row).unwrap().get(col).unwrap().clone());
+                }
+            }
+            new_tiles.push(new_row);
+        }
+        new_tiles
+    }
+
+    fn apply_gravity(mut tiles: Vec<Vec<String>>) -> Vec<Vec<String>> {
+        // NOTE: No need to check row 0, doesn't matter if it's got blanks
+        for r in (1..tiles.len()).rev() {
+            for c in 0..tiles.get(0).unwrap().len() {
+                if !tiles.get(r).unwrap().get(c).unwrap().eq(" ") {
+                    continue;
+                }
+
+                for row in (0..=r-1).rev() {
+                    let above = tiles.get(row).unwrap().get(c).unwrap().to_string();
+                    if above.eq(" ") {
+                        continue;
+                    }
+
+                    tiles.get_mut(r).unwrap()[c] = above.clone();
+                    tiles.get_mut(row).unwrap()[c] = " ".to_string();
+                    continue;
+                }
+            }
+        }
+
+        tiles
+    }
+
+    pub fn evolve_via(&mut self, found_word: FoundWord) -> Board {
+        let path_of_destruction = self.find_path_of_destruction(found_word);
+        let new_tiles = Self::apply_gravity(self.destroy_board(&path_of_destruction));
+
+        let new_mults = self
+            .multipliers
+            .iter()
+            .filter(|p| !path_of_destruction.contains(p))
+            .cloned()
+            .collect();
+
+        Board {
+            width: self.width,
+            height: self.height,
+            tiles: new_tiles,
+            multipliers: new_mults,
+            words: None,
+            evolved_via: None,
+            evolved_from: None,
+        }
+    }
+
+    pub fn find_words(&mut self, dict_path: &str) {
         let mut found_words = Vec::new();
         for row in 0..self.height + 1 {
             for col in 0..self.width + 1 {
                 let start = Position::new(row, col);
-                found_words.extend(self.finds_words_in_starting_from(&dict_path, start));
+                let found = self.finds_words_in_starting_from(&dict_path, start);
+                found_words.extend(found);
             }
         }
 
         found_words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
-        self.words = found_words
+        self.words = Some(found_words);
     }
 
     pub fn is_terminal(&self) -> bool {
         self.words.is_some()
-    }   
+    }
 
     fn finds_words_in_starting_from(&self, dict_path: &str, start: Position) -> Vec<FoundWord> {
         let mut dict = Dictionary::new(dict_path);
@@ -128,7 +248,7 @@ impl Board {
 
             let l = self.tiles.get(p.row).unwrap().get(p.col).unwrap();
 
-            if l.eq("") || l.eq(".") {
+            if l.eq("") || l.eq(".") || l.eq(" ") {
                 // This tile is a dead-end, no need to keep looking
                 continue;
             }
@@ -170,10 +290,10 @@ impl Board {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Eq, Hash, PartialEq)]
 pub struct Position {
-    row: usize,
-    col: usize,
+    pub row: usize,
+    pub col: usize,
 }
 
 impl fmt::Debug for Position {
@@ -181,6 +301,7 @@ impl fmt::Debug for Position {
         write!(f, "({}, {})", self.row, self.col)
     }
 }
+
 impl Position {
     pub fn new(row: usize, col: usize) -> Self {
         Position { row, col }
