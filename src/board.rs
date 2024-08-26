@@ -1,5 +1,7 @@
 use phf::phf_map;
-use std::fmt;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hasher;
+use std::{fmt, hash::Hash};
 
 use crate::dictionary::Dictionary;
 
@@ -43,17 +45,20 @@ pub struct FoundWord {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Board {
+    pub id: u64,
     width: usize,
     height: usize,
     tiles: Vec<Vec<String>>,
     multipliers: Vec<Position>,
+    searched: bool,
     words: Option<Vec<FoundWord>>,
-    evolved_via: Option<usize>,
+    evolved_via: Option<FoundWord>,
     evolved_from: Option<u64>,
 }
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "id = {}", self.id)?;
         for row in 0..self.height + 1 {
             for col in 0..self.width + 1 {
                 let c = self.tiles.get(row).unwrap().get(col).unwrap();
@@ -76,11 +81,18 @@ impl fmt::Display for FoundWord {
 }
 
 impl Board {
+    fn _hash_for(tiles: &Vec<Vec<String>>) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        tiles.hash(&mut hasher);
+        hasher.finish()
+    }
+
     pub fn new_from(tiles: Vec<Vec<String>>, multipliers: Vec<(usize, usize)>) -> Self {
         let height = tiles.len() - 1;
         let width = tiles.get(0).unwrap().len() - 1;
 
         Self {
+            id: Board::_hash_for(&tiles),
             width,
             height,
             tiles,
@@ -89,8 +101,13 @@ impl Board {
                 .map(|p| Position::new(p.0, p.1))
                 .collect(),
             words: None,
-            evolved_via: None,
-            evolved_from: None,
+            evolved_via: Some(FoundWord {
+                path: vec![],
+                word: "created by God".to_string(),
+                score: 0,
+            }),
+            evolved_from: Some(0),
+            searched: false,
         }
     }
 
@@ -99,11 +116,15 @@ impl Board {
     pub const DEBUG: &'static str = "*";
 
     pub fn words(&self) -> &Vec<FoundWord> {
+        assert!(
+            self.searched,
+            "I haven't been searched yet! No words for you!"
+        );
         self.words.as_ref().unwrap()
     }
 
-    pub fn evolved_via(&self) -> usize {
-        self.evolved_via.unwrap()
+    pub fn evolved_via(&self) -> FoundWord {
+        self.evolved_via.to_owned().unwrap()
     }
 
     pub fn evolved_from(&self) -> u64 {
@@ -118,7 +139,7 @@ impl Board {
         tiles.get(pos.row).unwrap().get(pos.col).unwrap().clone()
     }
 
-    fn find_path_of_destruction(&self, found_word: FoundWord) -> Vec<Position> {
+    fn find_path_of_destruction(&self, found_word: &FoundWord) -> Vec<Position> {
         let mut path_of_destruction = found_word.path.clone();
 
         // Any blocks get destroyed if any block adjacent to them is destroyed
@@ -190,8 +211,8 @@ impl Board {
         tiles
     }
 
-    pub fn evolve_via(&mut self, found_word: FoundWord) -> Board {
-        let path_of_destruction = self.find_path_of_destruction(found_word);
+    pub fn evolve_via(&mut self, parent_id: u64, found_word: FoundWord) -> Board {
+        let path_of_destruction = self.find_path_of_destruction(&found_word);
         let new_tiles = Self::apply_gravity(self.destroy_board(&path_of_destruction));
 
         let new_mults = self
@@ -202,13 +223,15 @@ impl Board {
             .collect();
 
         Board {
+            id: Board::_hash_for(&new_tiles),
             width: self.width,
             height: self.height,
             tiles: new_tiles,
             multipliers: new_mults,
             words: None,
-            evolved_via: None,
-            evolved_from: None,
+            evolved_via: Some(found_word),
+            evolved_from: Some(parent_id),
+            searched: false,
         }
     }
 
@@ -224,10 +247,12 @@ impl Board {
 
         found_words.sort_by(|a, b| b.score.cmp(&a.score));
         self.words = Some(found_words);
+        self.searched = true;
     }
 
     pub fn is_terminal(&self) -> bool {
-        self.words.is_some()
+        assert!(self.searched, "idk if I'm terminal, nobody's looked!");
+        self.words.as_ref().unwrap().len() == 0
     }
 
     fn finds_words_in_starting_from(&self, dict_path: &str, start: Position) -> Vec<FoundWord> {

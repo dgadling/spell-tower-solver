@@ -1,5 +1,5 @@
 use crate::board::{Board, FoundWord, Position};
-use std::time::SystemTime;
+use std::{collections::HashMap, time::SystemTime};
 
 /*
 use phf::phf_set;
@@ -49,15 +49,47 @@ fn evolution_test() {
 
     for findings in word_pickings {
         println!("Taking {}", findings.word);
-        let b = b.evolve_via(findings);
+        let new_board = b.evolve_via(b.id.clone(), findings);
+        b = new_board;
         println!("After");
         println!("------");
         println!("{}", b);
     }
 }
 
+fn id_test() {
+    let sample_b1 = vec![
+        /*
+         012345678
+        */
+        "i.ssbtpod".chars().map(|c| c.to_string()).collect(), // 0
+        "mcisneice".chars().map(|c| c.to_string()).collect(), // 1
+        "hcrqsovaa".chars().map(|c| c.to_string()).collect(), // 2
+        "ln.sgsnnr".chars().map(|c| c.to_string()).collect(), // 3
+        "eiusyijme".chars().map(|c| c.to_string()).collect(), // 4
+    ];
+    let sample_b2 = vec![
+        /*
+         012345678
+        */
+        "i.ssbtpod".chars().map(|c| c.to_string()).collect(), // 0
+        "mcisneice".chars().map(|c| c.to_string()).collect(), // 1
+        "hcrqsovaa".chars().map(|c| c.to_string()).collect(), // 2
+        "ln.sgsnnr".chars().map(|c| c.to_string()).collect(), // 3
+        "eiusyijme".chars().map(|c| c.to_string()).collect(), // 4
+    ];
+
+    let b1 = Board::new_from(sample_b1, vec![]);
+    let b2 = Board::new_from(sample_b2, vec![]);
+
+    println!("b1.id = {}, b2.id = {}", b1.id, b2.id);
+}
+
 pub fn board_tests(dict_path: &str) {
+    /*
+    id_test();
     evolution_test();
+    */
 
     let sample_board = vec![
         "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
@@ -77,12 +109,18 @@ pub fn board_tests(dict_path: &str) {
 
     let mult_locs: Vec<(usize, usize)> = vec![(0, 8), (1, 2), (9, 6)];
 
+    let mut all_boards = HashMap::new();
     let mut b = Board::new_from(sample_board, mult_locs);
+
     let mut total_points = 0;
-    for _ in 0..=5 {
+    for _ in 0..1000 {
         println!("Looking at\n-----\n{}", b);
         let now = SystemTime::now();
         b.find_words(dict_path);
+        if b.is_terminal() {
+            println!("We're done with {} points!", total_points);
+            break;
+        }
         println!(
             "Found {} words in {}ms!",
             b.words().len(),
@@ -91,7 +129,8 @@ pub fn board_tests(dict_path: &str) {
         let best = b.words().get(0).unwrap().clone();
         println!("The best is {}, taking it", best);
         total_points += best.score;
-        b = b.evolve_via(best);
+        let new = b.evolve_via(b.id.clone(), best);
+        all_boards.insert(b.id, b);
+        b = new;
     }
-    println!("After getting {} points, the board looks like\n-----\n{}", total_points, b);
 }
