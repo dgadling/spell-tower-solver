@@ -31,7 +31,7 @@ impl Dictionary {
         match rows_res {
             Ok(count) => {
                 println!("Look at the db and found {} rows", count);
-                if count > 369_000 {
+                if count == 191_745 {
                     println!("Sounds about right");
                     return;
                 }
