@@ -86,6 +86,6 @@ pub fn board_tests(dict_path: &str) {
         now.elapsed().unwrap().as_millis()
     );
     for found_word in b.words().into_iter().take(15) {
-        println!("  {} via {:?}", found_word.word, found_word.path);
+        println!("  {}", found_word);
     }
 }

@@ -65,6 +65,16 @@ impl fmt::Display for Board {
     }
 }
 
+impl fmt::Display for FoundWord {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} for {} points via {:?}",
+            self.word, self.score, self.path
+        )
+    }
+}
+
 impl Board {
     pub fn new_from(tiles: Vec<Vec<String>>, multipliers: Vec<(usize, usize)>) -> Self {
         let height = tiles.len() - 1;
@@ -211,7 +221,7 @@ impl Board {
             }
         }
 
-        found_words.sort_by(|a, b| b.word.len().cmp(&a.word.len()));
+        found_words.sort_by(|a, b| b.score.cmp(&a.score));
         self.words = Some(found_words);
     }
 
