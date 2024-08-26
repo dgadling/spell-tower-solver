@@ -78,14 +78,20 @@ pub fn board_tests(dict_path: &str) {
     let mult_locs: Vec<(usize, usize)> = vec![(0, 8), (1, 2), (9, 6)];
 
     let mut b = Board::new_from(sample_board, mult_locs);
-    let now = SystemTime::now();
-    b.find_words(dict_path);
-    println!(
-        "Found {} words in {}ms! Here's the highest scoring 15!",
-        b.words().len(),
-        now.elapsed().unwrap().as_millis()
-    );
-    for found_word in b.words().into_iter().take(15) {
-        println!("  {}", found_word);
+    let mut total_points = 0;
+    for _ in 0..=5 {
+        println!("Looking at\n-----\n{}", b);
+        let now = SystemTime::now();
+        b.find_words(dict_path);
+        println!(
+            "Found {} words in {}ms!",
+            b.words().len(),
+            now.elapsed().unwrap().as_millis()
+        );
+        let best = b.words().get(0).unwrap().clone();
+        println!("The best is {}, taking it", best);
+        total_points += best.score;
+        b = b.evolve_via(best);
     }
+    println!("After getting {} points, the board looks like\n-----\n{}", total_points, b);
 }
