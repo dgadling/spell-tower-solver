@@ -2,7 +2,6 @@ use crate::board::{Board, FoundWord, Position};
 use std::{collections::HashMap, time::SystemTime};
 
 /*
-*/
 
 fn evolution_test() {
     let sample_board = vec![
@@ -82,6 +81,7 @@ fn id_test() {
 
     println!("b1.id = {}, b2.id = {}", b1.id, b2.id);
 }
+*/
 
 pub fn board_tests(dict_path: &str) {
     /*
@@ -110,13 +110,11 @@ pub fn board_tests(dict_path: &str) {
     let mut all_boards = HashMap::new();
     let mut b = Board::new_from(sample_board, mult_locs);
 
-    let mut total_points = 0;
     for _ in 0..1000 {
         println!("Looking at\n-----\n{}", b);
         let now = SystemTime::now();
         b.find_words(dict_path);
         if b.is_terminal() {
-            println!("We're done with {} points!", total_points);
             break;
         }
         println!(
@@ -126,9 +124,10 @@ pub fn board_tests(dict_path: &str) {
         );
         let best = b.words().get(0).unwrap().clone();
         println!("The best is {}, taking it", best);
-        total_points += best.score;
         let new = b.evolve_via(b.id.clone(), best);
         all_boards.insert(b.id, b);
         b = new;
     }
+
+    println!("Ended with score = {}", b.get_score());
 }

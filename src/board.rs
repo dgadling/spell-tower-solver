@@ -53,6 +53,7 @@ pub struct Board {
     height: usize,
     tiles: Vec<Vec<String>>,
     multipliers: Vec<Position>,
+    cumulative_score: u32,
     searched: bool,
     words: Option<Vec<FoundWord>>,
     evolved_via: Option<FoundWord>,
@@ -104,6 +105,7 @@ impl Board {
                 .map(|p| Position::new(p.0, p.1))
                 .collect(),
             words: None,
+            cumulative_score: 0,
             evolved_via: Some(FoundWord {
                 path: vec![],
                 word: "created by God".to_string(),
@@ -117,6 +119,10 @@ impl Board {
     pub const BLOCK: &'static str = ".";
     pub const EMPTY: &'static str = " ";
     pub const DEBUG: &'static str = "*";
+
+    pub fn get_score(&self) -> u32 {
+        self.cumulative_score
+    }
 
     pub fn words(&self) -> &Vec<FoundWord> {
         assert!(
@@ -249,6 +255,7 @@ impl Board {
             height: self.height,
             tiles: new_tiles,
             multipliers: new_mults,
+            cumulative_score: self.cumulative_score + found_word.score,
             words: None,
             evolved_via: Some(found_word),
             evolved_from: Some(parent_id),
