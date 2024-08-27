@@ -2,8 +2,6 @@ use crate::board::{Board, FoundWord, Position};
 use std::{collections::HashMap, time::SystemTime};
 
 /*
-use phf::phf_set;
-static CLEARS_ROW: phf::Set<char> = phf_set!('j', 'q', 'x', 'z');
 */
 
 fn evolution_test() {

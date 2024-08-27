@@ -1,5 +1,6 @@
-use phf::phf_map;
+use phf::{phf_map, phf_set};
 use std::collections::hash_map::DefaultHasher;
+use std::collections::HashSet;
 use std::hash::Hasher;
 use std::{fmt, hash::Hash};
 
@@ -35,6 +36,8 @@ static LETTER_SCORES: phf::Map<char, u32> = phf_map! {
     'y' => 4,
     'z' => 10,
 };
+
+static CLEARS_ROW: phf::Set<char> = phf_set!('j', 'q', 'x', 'z');
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct FoundWord {
@@ -140,7 +143,25 @@ impl Board {
     }
 
     fn find_path_of_destruction(&self, found_word: &FoundWord) -> Vec<Position> {
-        let mut path_of_destruction = found_word.path.clone();
+        let mut path_of_destruction: HashSet<Position> =
+            HashSet::from_iter(found_word.path.clone());
+
+        // See if we're *directly* going over any of the row-clearing letters
+        path_of_destruction.extend(
+            found_word
+                .word
+                .char_indices()
+                .filter_map(|(idx, c)| {
+                    if !CLEARS_ROW.contains(&c) {
+                        return None;
+                    }
+
+                    let p = found_word.path.get(idx).unwrap();
+                    Some((0..=self.width).map(|c| Position { row: p.row, col: c }))
+                })
+                .flatten()
+                .collect::<Vec<Position>>(),
+        );
 
         // Any blocks get destroyed if any block adjacent to them is destroyed
         path_of_destruction.extend(
@@ -167,7 +188,7 @@ impl Board {
             );
         }
 
-        path_of_destruction
+        path_of_destruction.into_iter().collect()
     }
 
     fn destroy_board(&self, path_of_destruction: &Vec<Position>) -> Vec<Vec<String>> {
