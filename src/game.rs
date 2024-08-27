@@ -1,6 +1,6 @@
 use crate::board::Board;
 use crate::dictionary::Dictionary;
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
 
 /*
@@ -101,6 +101,13 @@ pub fn play_game(dict: &mut Dictionary, board: Vec<Vec<String>>, mult_locs: Vec<
     all_boards.insert(starting_board.id, starting_board);
 
     let bar = ProgressBar::new(1);
+    bar.set_style(
+        ProgressStyle::with_template(
+            "[{elapsed} {wide_bar:.blue} {human_pos:>}/{human_len} @ {per_sec}",
+        )
+        .unwrap()
+        .progress_chars("-> "),
+    );
     while !to_process.is_empty() {
         let mut b = all_boards.get(&to_process.pop().unwrap()).unwrap().clone();
 
