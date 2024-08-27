@@ -1,5 +1,7 @@
-use crate::board::{Board, FoundWord, Position};
-use std::{collections::HashMap, time::SystemTime};
+use crate::board::Board;
+use crate::dictionary::Dictionary;
+use indicatif::ProgressBar;
+use std::collections::HashMap;
 
 /*
 
@@ -83,51 +85,71 @@ fn id_test() {
 }
 */
 
-pub fn board_tests(dict_path: &str) {
+pub fn play_game(dict: &mut Dictionary, board: Vec<Vec<String>>, mult_locs: Vec<(usize, usize)>) {
     /*
     id_test();
     evolution_test();
     */
 
-    let sample_board = vec![
-        "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
-        "mcisneice".chars().map(|c| c.to_string()).collect(),
-        "hcrqsovaa".chars().map(|c| c.to_string()).collect(),
-        "ln.sgsnnr".chars().map(|c| c.to_string()).collect(),
-        "eiusyijme".chars().map(|c| c.to_string()).collect(),
-        "olmgapelf".chars().map(|c| c.to_string()).collect(),
-        "tsaeeudhn".chars().map(|c| c.to_string()).collect(),
-        "bsoenditr".chars().map(|c| c.to_string()).collect(),
-        "cwoopteaf".chars().map(|c| c.to_string()).collect(),
-        "itzoutner".chars().map(|c| c.to_string()).collect(),
-        ".upriigal".chars().map(|c| c.to_string()).collect(),
-        "tkayee.ld".chars().map(|c| c.to_string()).collect(),
-        "xlihcrras".chars().map(|c| c.to_string()).collect(),
-    ];
-
-    let mult_locs: Vec<(usize, usize)> = vec![(0, 8), (1, 2), (9, 6)];
-
     let mut all_boards = HashMap::new();
-    let mut b = Board::new_from(sample_board, mult_locs);
+    let mut terminal_boards = Vec::new();
+    let mut to_process = Vec::new();
 
-    for _ in 0..1000 {
-        println!("Looking at\n-----\n{}", b);
-        let now = SystemTime::now();
-        b.find_words(dict_path);
-        if b.is_terminal() {
-            break;
+    let starting_board = Board::new_from(board, mult_locs);
+
+    to_process.push(starting_board.id);
+    all_boards.insert(starting_board.id, starting_board);
+
+    let bar = ProgressBar::new(1);
+    while !to_process.is_empty() {
+        let mut b = all_boards.get(&to_process.pop().unwrap()).unwrap().clone();
+
+        if b.searched() {
+            bar.inc(1);
+            continue;
         }
-        println!(
-            "Found {} words in {}ms!",
-            b.words().len(),
-            now.elapsed().unwrap().as_millis()
-        );
-        let best = b.words().get(0).unwrap().clone();
-        println!("The best is {}, taking it", best);
-        let new = b.evolve_via(b.id.clone(), best);
-        all_boards.insert(b.id, b);
-        b = new;
+
+        b.find_words(dict);
+        if b.is_terminal() {
+            terminal_boards.push(b.id);
+            bar.inc(1);
+            continue;
+        }
+
+        for found_word in b.words().clone() {
+            let new_board = b.evolve_via(b.id, found_word);
+            to_process.push(new_board.id);
+            all_boards.insert(new_board.id, new_board);
+            bar.inc_length(1);
+        }
+        bar.inc(1);
     }
 
-    println!("Ended with score = {}", b.get_score());
+    println!("Ended with {} terminal boards", terminal_boards.len());
+    terminal_boards.sort_by(|a, b| {
+        all_boards
+            .get(b)
+            .unwrap()
+            .get_score()
+            .cmp(&all_boards.get(a).unwrap().get_score())
+    });
+
+    let winner = all_boards.get(terminal_boards.get(0).unwrap()).unwrap();
+
+    println!("Highest scoring had a score of {}", winner.get_score());
+
+    let mut winning_path = vec![];
+    let mut curr_board = winner;
+    loop {
+        if curr_board.evolved_from() == 0 {
+            break;
+        }
+
+        winning_path.push(curr_board.evolved_via().word);
+        curr_board = all_boards
+            .get(&all_boards.get(&curr_board.id).unwrap().evolved_from())
+            .unwrap();
+    }
+    winning_path.reverse();
+    println!("Using a path of: {:?}", winning_path);
 }

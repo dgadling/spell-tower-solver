@@ -124,6 +124,10 @@ impl Board {
         self.cumulative_score
     }
 
+    pub fn searched(&self) -> bool {
+        self.searched
+    }
+
     pub fn words(&self) -> &Vec<FoundWord> {
         assert!(
             self.searched,
@@ -263,12 +267,17 @@ impl Board {
         }
     }
 
-    pub fn find_words(&mut self, dict_path: &str) {
+    pub fn is_terminal(&self) -> bool {
+        assert!(self.searched, "idk if I'm terminal, nobody's looked!");
+        self.words.as_ref().unwrap().len() == 0
+    }
+
+    pub fn find_words(&mut self, dict: &mut Dictionary) {
         let mut found_words = Vec::new();
         for row in 0..self.height + 1 {
             for col in 0..self.width + 1 {
                 let start = Position::new(row, col);
-                let found = self.finds_words_in_starting_from(&dict_path, start);
+                let found = self.finds_words_in_starting_from(dict, start);
                 found_words.extend(found);
             }
         }
@@ -278,13 +287,11 @@ impl Board {
         self.searched = true;
     }
 
-    pub fn is_terminal(&self) -> bool {
-        assert!(self.searched, "idk if I'm terminal, nobody's looked!");
-        self.words.as_ref().unwrap().len() == 0
-    }
-
-    fn finds_words_in_starting_from(&self, dict_path: &str, start: Position) -> Vec<FoundWord> {
-        let mut dict = Dictionary::new(dict_path);
+    fn finds_words_in_starting_from(
+        &self,
+        dict: &mut Dictionary,
+        start: Position,
+    ) -> Vec<FoundWord> {
         let mut path = Vec::new();
         path.push(start.clone());
 
@@ -292,7 +299,7 @@ impl Board {
             row: start.row,
             col: start.col,
         });
-        self._find_word(&start, &mut path, &path_str, &mut dict)
+        self._find_word(&start, &mut path, &path_str, dict)
     }
 
     fn _find_word(
