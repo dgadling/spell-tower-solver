@@ -134,7 +134,8 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
 
     let mut dict = Dictionary::with_conn(pool.get().unwrap());
     while !to_process.is_empty() {
-        let mut b = all_boards.get(&to_process.pop().unwrap()).unwrap().clone();
+        let board_id = to_process.pop().unwrap();
+        let b = all_boards.get_mut(&board_id).unwrap();
 
         if b.searched() {
             bump("already_searched");
@@ -149,19 +150,26 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
         }
 
         b.find_words(&mut dict);
+
+        // Now that we're done mutating, let's replace `b` with an immutable reference
+        let b = all_boards.get(&board_id).unwrap();
+
         if b.is_terminal() {
             bump("found_terminal");
-            terminal_boards.push(b.id);
+            terminal_boards.push(board_id);
             // Technically we don't need to update since  we'll find it in terminal_boards.
             // BUT this makes me feel better and technically saves a hash lookup
-            all_boards.insert(b.id, b);
+            //all_boards.insert(b.id, b);
             bar.inc(1);
             continue;
         }
 
+        // To keep all_boards references immutable, let's keep a separate list of all the
+        // Boards we're going to add to all_boards.
+        let mut to_insert = HashMap::new();
         for found_word in b.words().clone() {
             let new_board = b.evolve_via(found_word);
-            if all_boards.contains_key(&new_board.id) {
+            if all_boards.contains_key(&new_board.id) || to_insert.contains_key(&new_board.id) {
                 /*
                    No need to push it into to_process only to immediately take it back out.
                    The only way it ended up in all_boards is that it was already discovered
@@ -172,13 +180,15 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
                 bump("rediscovered");
             } else {
                 to_process.push(new_board.id);
-                all_boards.insert(new_board.id, new_board);
+                to_insert.insert(new_board.id, new_board);
                 bar.inc_length(1);
             }
         }
-        // Now that we're done with the board we can put the newly searched version back in.
-        // This way if it was NOT terminal we won't end up searching through it again
-        all_boards.insert(b.id, b);
+
+        assert!(b.searched(), "We literally just searched!");
+
+        // Now that we found all the new boards, give them to all_boards
+        all_boards.extend(to_insert);
         bar.inc(1);
 
         if stop_now.load(Ordering::SeqCst) {
