@@ -160,7 +160,7 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
         }
 
         for found_word in b.words().clone() {
-            let new_board = b.evolve_via(b.id, found_word);
+            let new_board = b.evolve_via(found_word);
             if all_boards.contains_key(&new_board.id) {
                 /*
                    No need to push it into to_process only to immediately take it back out.

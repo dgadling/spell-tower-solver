@@ -249,7 +249,7 @@ impl Board {
         tiles
     }
 
-    pub fn evolve_via(&mut self, parent_id: u64, found_word: FoundWord) -> Board {
+    pub fn evolve_via(&self, found_word: FoundWord) -> Board {
         let path_of_destruction = self.find_path_of_destruction(&found_word);
         let new_tiles = Self::apply_gravity(self.destroy_board(&path_of_destruction));
 
@@ -269,7 +269,7 @@ impl Board {
             cumulative_score: self.cumulative_score + found_word.score,
             words: None,
             evolved_via: Some(found_word),
-            evolved_from: Some(parent_id),
+            evolved_from: Some(self.id),
             searched: false,
         }
     }
