@@ -2,6 +2,8 @@ use crate::board::Board;
 use crate::dictionary::Dictionary;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 /*
 
@@ -91,6 +93,15 @@ pub fn play_game(dict: &mut Dictionary, board: Vec<Vec<String>>, mult_locs: Vec<
     evolution_test();
     */
 
+    let stop_now = Arc::new(AtomicBool::new(false));
+    let r = stop_now.clone();
+
+    ctrlc::set_handler(move || {
+        r.store(true, Ordering::SeqCst);
+    })
+    .expect("Error setting Ctrl-C handler");
+
+    let mut stats = HashMap::new();
     let mut all_boards = HashMap::new();
     let mut terminal_boards = Vec::new();
     let mut to_process = Vec::new();
@@ -108,31 +119,70 @@ pub fn play_game(dict: &mut Dictionary, board: Vec<Vec<String>>, mult_locs: Vec<
         .unwrap()
         .progress_chars("-> "),
     );
+
+    let mut bump = |name: &str| {
+        stats
+            .entry(name.to_owned())
+            .and_modify(|c| *c += 1)
+            .or_insert(1);
+    };
+
     while !to_process.is_empty() {
         let mut b = all_boards.get(&to_process.pop().unwrap()).unwrap().clone();
 
         if b.searched() {
+            bump("already_searched");
+            bar.inc(1);
+            continue;
+        }
+
+        if terminal_boards.contains(&b.id) {
+            bump("already_found_terminal");
             bar.inc(1);
             continue;
         }
 
         b.find_words(dict);
         if b.is_terminal() {
+            bump("found_terminal");
             terminal_boards.push(b.id);
+            // Technically we don't need to update since  we'll find it in terminal_boards.
+            // BUT this makes me feel better and technically saves a hash lookup
+            all_boards.insert(b.id, b);
             bar.inc(1);
             continue;
         }
 
         for found_word in b.words().clone() {
             let new_board = b.evolve_via(b.id, found_word);
-            to_process.push(new_board.id);
-            all_boards.insert(new_board.id, new_board);
-            bar.inc_length(1);
+            if all_boards.contains_key(&new_board.id) {
+                /*
+                   No need to push it into to_process only to immediately take it back out.
+                   The only way it ended up in all_boards is that it was already discovered
+                   and put in to_process.
+                   If we already searched it, no need to repeat that work.
+                   If we haven't searched it yet, it'll still be in to_process
+                */
+                bump("rediscovered");
+            } else {
+                to_process.push(new_board.id);
+                all_boards.insert(new_board.id, new_board);
+                bar.inc_length(1);
+            }
         }
+        // Now that we're done with the board we can put the newly searched version back in.
+        // This way if it was NOT terminal we won't end up searching through it again
+        all_boards.insert(b.id, b);
         bar.inc(1);
+
+        if stop_now.load(Ordering::SeqCst) {
+            break;
+        }
     }
 
-    println!("Ended with {} terminal boards", terminal_boards.len());
+    println!("Stats = {:?}", stats);
+    println!("Found {} unique terminal boards", terminal_boards.len());
+
     terminal_boards.sort_by(|a, b| {
         all_boards
             .get(b)
