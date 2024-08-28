@@ -1,16 +1,19 @@
 use indicatif::ProgressBar;
+use r2d2::PooledConnection;
+use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 pub struct Dictionary {
-    conn: rusqlite::Connection,
+    conn: PooledConnection<SqliteConnectionManager>,
     word_cache: HashMap<String, bool>,
     path_cache: HashMap<String, bool>,
 }
 
 impl Dictionary {
+    /*
     pub fn new(db_path: &str) -> Self {
         let conn = Connection::open(db_path)
             .unwrap_or_else(|e| panic!("Couldn't open {}: {}", db_path, e));
@@ -42,7 +45,17 @@ impl Dictionary {
         println!("That doesn't look right. Trying to load data.");
         self.init_db(source_file, min_word_len);
     }
+    */
 
+    pub fn with_conn(conn: PooledConnection<SqliteConnectionManager>) -> Self {
+        Dictionary {
+            conn,
+            word_cache: HashMap::new(),
+            path_cache: HashMap::new(),
+        }
+    }
+
+    /*
     fn init_db(&self, source_file: &str, min_word_len: usize) {
         println!("Creating database of valid words from {}", source_file);
         let in_lines = BufReader::new(File::open(source_file).expect("Couldn't read?!"))
@@ -95,6 +108,7 @@ impl Dictionary {
 
         println!("Done init-ing!");
     }
+    */
 
     pub fn has_path(&mut self, prefix: &str) -> bool {
         if let Some(ans) = self.path_cache.get(prefix) {

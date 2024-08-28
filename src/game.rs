@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use r2d2_sqlite::SqliteConnectionManager;
 /*
 
 fn evolution_test() {
@@ -87,7 +88,7 @@ fn id_test() {
 }
 */
 
-pub fn play_game(dict: &mut Dictionary, board: Vec<Vec<String>>, mult_locs: Vec<(usize, usize)>) {
+pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize, usize)>) {
     /*
     id_test();
     evolution_test();
@@ -127,6 +128,11 @@ pub fn play_game(dict: &mut Dictionary, board: Vec<Vec<String>>, mult_locs: Vec<
             .or_insert(1);
     };
 
+    let manager = SqliteConnectionManager::file(dict_path);
+    let pool = r2d2::Pool::new(manager).unwrap();
+    println!("{:?}", pool.state());
+
+    let mut dict = Dictionary::with_conn(pool.get().unwrap());
     while !to_process.is_empty() {
         let mut b = all_boards.get(&to_process.pop().unwrap()).unwrap().clone();
 
@@ -142,7 +148,7 @@ pub fn play_game(dict: &mut Dictionary, board: Vec<Vec<String>>, mult_locs: Vec<
             continue;
         }
 
-        b.find_words(dict);
+        b.find_words(&mut dict);
         if b.is_terminal() {
             bump("found_terminal");
             terminal_boards.push(b.id);
@@ -180,6 +186,7 @@ pub fn play_game(dict: &mut Dictionary, board: Vec<Vec<String>>, mult_locs: Vec<
         }
     }
 
+    println!("{:?}", pool.state());
     println!("Stats = {:?}", stats);
     println!("Found {} unique terminal boards", terminal_boards.len());
 
