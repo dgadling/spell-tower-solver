@@ -62,13 +62,20 @@ pub struct Board {
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "id = {}", self.id)?;
-        for row in 0..self.height + 1 {
-            for col in 0..self.width + 1 {
+        write!(
+            f,
+            "id={}, came via = {}\n",
+            self.id,
+            self.evolved_via.as_ref().unwrap().word
+        )?;
+        for row in 0..=self.height {
+            for col in 0..=self.width {
                 let c = self.tiles.get(row).unwrap().get(col).unwrap();
                 write!(f, "{}", c)?;
             }
-            write!(f, "\n")?;
+            if row != self.height {
+                write!(f, "\n")?;
+            }
         }
         Ok(())
     }
