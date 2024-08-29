@@ -6,8 +6,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use r2d2_sqlite::SqliteConnectionManager;
-/*
 
+#[allow(dead_code)]
+use crate::board::{FoundWord, Position};
+
+#[allow(dead_code)]
 fn evolution_test() {
     let sample_board = vec![
         /*
@@ -51,7 +54,7 @@ fn evolution_test() {
 
     for findings in word_pickings {
         println!("Taking {}", findings.word);
-        let new_board = b.evolve_via(b.id.clone(), findings);
+        let new_board = b.evolve_via(findings);
         b = new_board;
         println!("After");
         println!("------");
@@ -59,6 +62,7 @@ fn evolution_test() {
     }
 }
 
+#[allow(dead_code)]
 fn id_test() {
     let sample_b1 = vec![
         /*
@@ -86,14 +90,8 @@ fn id_test() {
 
     println!("b1.id = {}, b2.id = {}", b1.id, b2.id);
 }
-*/
 
 pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize, usize)>) {
-    /*
-    id_test();
-    evolution_test();
-    */
-
     let stop_now = Arc::new(AtomicBool::new(false));
     let r = stop_now.clone();
 
