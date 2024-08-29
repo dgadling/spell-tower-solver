@@ -218,9 +218,13 @@ impl Board {
         new_tiles
     }
 
-    fn apply_gravity(mut tiles: Vec<Vec<String>>) -> Vec<Vec<String>> {
-        // NOTE: No need to check row 0, doesn't matter if it's got blanks
-        for r in (1..tiles.len()).rev() {
+    fn apply_gravity(tiles: &mut Vec<Vec<String>>, path_of_destruction: &mut Vec<Position>) {
+        // Reverse sort based on row so we start at the lowest row and work our way back up
+        path_of_destruction.sort_by(|a, b| b.row.cmp(&a.row));
+
+        // No need to check row 0, doesn't matter if it's got blanks
+        // No need to start any lower than the first blown up row
+        for r in (1..=path_of_destruction[0].row).rev() {
             for c in 0..tiles.get(0).unwrap().len() {
                 if !tiles.get(r).unwrap().get(c).unwrap().eq(" ") {
                     continue;
@@ -238,13 +242,12 @@ impl Board {
                 }
             }
         }
-
-        tiles
     }
 
     pub fn evolve_via(&self, found_word: FoundWord) -> Board {
-        let path_of_destruction = self.find_path_of_destruction(&found_word);
-        let new_tiles = Self::apply_gravity(self.destroy_board(&path_of_destruction));
+        let mut path_of_destruction = self.find_path_of_destruction(&found_word);
+        let mut new_tiles = self.destroy_board(&path_of_destruction);
+        Self::apply_gravity(&mut new_tiles, &mut path_of_destruction);
 
         let new_mults = self
             .multipliers
