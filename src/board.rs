@@ -209,19 +209,12 @@ impl Board {
     }
 
     fn destroy_board(&self, path_of_destruction: &Vec<Position>) -> Vec<Vec<String>> {
-        let mut new_tiles = Vec::new();
-        for row in 0..self.height + 1 {
-            let mut new_row = Vec::new();
-            for col in 0..self.width + 1 {
-                let p = Position::new(row, col);
-                if path_of_destruction.contains(&p) {
-                    new_row.push(Board::EMPTY.to_string());
-                } else {
-                    new_row.push(self.get(&Position { row, col }).clone());
-                }
-            }
-            new_tiles.push(new_row);
+        let mut new_tiles = self.tiles.clone();
+
+        for p in path_of_destruction {
+            new_tiles[p.row][p.col] = Board::EMPTY.to_string();
         }
+
         new_tiles
     }
 
