@@ -1,10 +1,10 @@
-use indicatif::ProgressBar;
+//use indicatif::ProgressBar;
 use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::Connection;
+//use rusqlite::Connection;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+//use std::fs::File;
+//use std::io::{BufRead, BufReader};
 
 pub struct Dictionary {
     conn: PooledConnection<SqliteConnectionManager>,

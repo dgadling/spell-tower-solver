@@ -2,7 +2,7 @@ pub mod board;
 pub mod dictionary;
 mod game;
 
-use dictionary::Dictionary;
+//use dictionary::Dictionary;
 
 fn main() {
     let dictionary_db_name = "dictionary.db";
