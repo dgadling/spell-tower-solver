@@ -134,6 +134,7 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
 
     let mut dict = Dictionary::with_conn(pool.get().unwrap());
     while !to_process.is_empty() {
+        bump("total_processed");
         let board_id = to_process.pop().unwrap();
         let b = all_boards.get_mut(&board_id).unwrap();
 
@@ -150,6 +151,7 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
         }
 
         b.find_words(&mut dict);
+        bump("total_searched");
 
         // Now that we're done mutating, let's replace `b` with an immutable reference
         let b = all_boards.get(&board_id).unwrap();
