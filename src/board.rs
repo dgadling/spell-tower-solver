@@ -151,12 +151,12 @@ impl Board {
         self.evolved_from.unwrap()
     }
 
-    pub fn get(&self, pos: &Position) -> String {
+    pub fn get(&self, pos: &Position) -> &String {
         Board::_get(&self.tiles, pos)
     }
 
-    fn _get(tiles: &Vec<Vec<String>>, pos: &Position) -> String {
-        tiles.get(pos.row).unwrap().get(pos.col).unwrap().clone()
+    fn _get<'a, 'b>(tiles: &'a Vec<Vec<String>>, pos: &'b Position) -> &'a String {
+        tiles.get(pos.row).unwrap().get(pos.col).unwrap()
     }
 
     fn find_path_of_destruction(&self, found_word: &FoundWord) -> Vec<Position> {
@@ -217,7 +217,7 @@ impl Board {
                 if path_of_destruction.contains(&p) {
                     new_row.push(Board::EMPTY.to_string());
                 } else {
-                    new_row.push(self.get(&Position { row, col }));
+                    new_row.push(self.get(&Position { row, col }).clone());
                 }
             }
             new_tiles.push(new_row);
@@ -336,13 +336,13 @@ impl Board {
 
         let candidate_positions = pos.neighbors(self.width, self.height);
 
-        for p in candidate_positions {
+        for p in candidate_positions.iter() {
             // Can't cross our existing path
-            if path.contains(&p) {
+            if path.contains(p) {
                 continue;
             }
 
-            let l = self.get(&p);
+            let l = self.get(p);
 
             if l.eq(Board::BLOCK) || l.eq(Board::EMPTY) {
                 // This tile is a dead-end, no need to keep looking
