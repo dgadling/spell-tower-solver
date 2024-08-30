@@ -120,16 +120,18 @@ impl Dictionary {
 
     pub fn print_stats(&self) {
         println!(
-            "has_path: queries = {}, hits {}, hit ratio = {:.4}",
+            "has_path: queries = {}, hits {}, hit ratio = {:.4}, db queries = {}",
             self.path_queries,
             self.path_hits,
-            100.0 * (self.path_hits as f64 / self.path_queries as f64)
+            100.0 * (self.path_hits as f64 / self.path_queries as f64),
+            self.path_queries - self.path_hits
         );
         println!(
-            " is_word: queries = {}, hits {}, hit ratio = {:.4}",
+            " is_word: queries = {}, hits {}, hit ratio = {:.4}, db queries = {}",
             self.word_queries,
             self.word_hits,
-            100.0 * (self.word_hits as f64 / self.word_queries as f64)
+            100.0 * (self.word_hits as f64 / self.word_queries as f64),
+            self.word_queries - self.word_hits
         );
     }
 
