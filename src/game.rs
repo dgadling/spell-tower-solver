@@ -1,7 +1,7 @@
 use crate::board::Board;
 use crate::dictionary::Dictionary;
 use indicatif::{ProgressBar, ProgressStyle};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -102,7 +102,7 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
 
     let mut stats = HashMap::new();
     let mut all_boards = HashMap::new();
-    let mut terminal_boards = Vec::new();
+    let mut terminal_boards = HashSet::new();
     let mut to_process = Vec::new();
 
     let starting_board = Board::new_from(board, mult_locs);
@@ -156,7 +156,7 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
 
         if b.is_terminal() {
             bump("found_terminal");
-            terminal_boards.push(board_id);
+            terminal_boards.insert(board_id);
             // Technically we don't need to update since  we'll find it in terminal_boards.
             // BUT this makes me feel better and technically saves a hash lookup
             //all_boards.insert(b.id, b);
@@ -200,7 +200,8 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
     println!("Stats = {:?}", stats);
     println!("Found {} unique terminal boards", terminal_boards.len());
 
-    terminal_boards.sort_by(|a, b| {
+    let mut final_term_boards = terminal_boards.iter().collect::<Vec<&u64>>();
+    final_term_boards.sort_by(|a, b| {
         all_boards
             .get(b)
             .unwrap()
@@ -208,7 +209,7 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
             .cmp(&all_boards.get(a).unwrap().get_score())
     });
 
-    let winner = all_boards.get(terminal_boards.get(0).unwrap()).unwrap();
+    let winner = all_boards.get(final_term_boards.get(0).unwrap()).unwrap();
 
     println!("Highest scoring had a score of {}", winner.get_score());
 
