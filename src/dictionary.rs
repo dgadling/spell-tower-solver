@@ -10,6 +10,10 @@ pub struct Dictionary {
     conn: PooledConnection<SqliteConnectionManager>,
     word_cache: HashMap<String, bool>,
     path_cache: HashMap<String, bool>,
+    path_queries: u64,
+    path_hits: u64,
+    word_queries: u64,
+    word_hits: u64,
 }
 
 impl Dictionary {
@@ -52,6 +56,10 @@ impl Dictionary {
             conn,
             word_cache: HashMap::new(),
             path_cache: HashMap::new(),
+            path_queries: 0,
+            path_hits: 0,
+            word_queries: 0,
+            word_hits: 0,
         }
     }
 
@@ -110,8 +118,25 @@ impl Dictionary {
     }
     */
 
+    pub fn print_stats(&self) {
+        println!(
+            "has_path: queries = {}, hits {}, hit ratio = {:.4}",
+            self.path_queries,
+            self.path_hits,
+            100.0 * (self.path_hits as f64 / self.path_queries as f64)
+        );
+        println!(
+            " is_word: queries = {}, hits {}, hit ratio = {:.4}",
+            self.word_queries,
+            self.word_hits,
+            100.0 * (self.word_hits as f64 / self.word_queries as f64)
+        );
+    }
+
     pub fn has_path(&mut self, prefix: &str) -> bool {
+        self.path_queries += 1;
         if let Some(ans) = self.path_cache.get(prefix) {
+            self.path_hits += 1;
             return *ans;
         }
 
@@ -131,7 +156,9 @@ impl Dictionary {
     }
 
     pub fn is_word(&mut self, prefix: &str) -> bool {
+        self.word_queries += 1;
         if let Some(ans) = self.word_cache.get(prefix) {
+            self.word_hits += 1;
             return *ans;
         }
 

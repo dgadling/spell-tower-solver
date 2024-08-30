@@ -128,7 +128,6 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
 
     let manager = SqliteConnectionManager::file(dict_path);
     let pool = r2d2::Pool::new(manager).unwrap();
-    println!("{:?}", pool.state());
 
     let mut dict = Dictionary::with_conn(pool.get().unwrap());
     while !to_process.is_empty() {
@@ -196,7 +195,8 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
         }
     }
 
-    println!("{:?}", pool.state());
+    bar.finish();
+    dict.print_stats();
     println!("Stats = {:?}", stats);
     println!("Found {} unique terminal boards", terminal_boards.len());
 
