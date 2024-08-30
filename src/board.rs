@@ -345,9 +345,13 @@ impl Board {
                 continue;
             }
 
-            let fragment = path_str.clone() + &l;
+            let mut fragment = String::with_capacity(path_str.len() + 1);
+            fragment.push_str(&path_str);
+            fragment.push_str(l);
+
             if dict.has_path(&fragment) {
-                let mut next_path = path.clone();
+                let mut next_path = Vec::with_capacity(path.len() + 1);
+                next_path.clone_from(path);
                 next_path.push(p.clone());
 
                 let found = self._find_word(&p, &mut next_path, &fragment, dict);
