@@ -168,15 +168,29 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
         let mut to_insert = HashMap::new();
         for found_word in b.words().clone() {
             let new_board = b.evolve_via(found_word);
-            if all_boards.contains_key(&new_board.id) || to_insert.contains_key(&new_board.id) {
+            if to_insert.contains_key(&new_board.id) {
+                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                // hasn't been searched yet, maybe a simple swap is OK.
+                bump("already_queued_this_board");
+            } else if to_process.contains(&new_board.id) {
+                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                // hasn't been searched yet, maybe a simple swap is OK.
+                bump("already_queued_previously");
+            } else if all_boards.contains_key(&new_board.id) {
+                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                // **HAS** been searched, we'd need to update any descendants scores with the delta
                 /*
-                   No need to push it into to_process only to immediately take it back out.
-                   The only way it ended up in all_boards is that it was already discovered
-                   and put in to_process.
-                   If we already searched it, no need to repeat that work.
-                   If we haven't searched it yet, it'll still be in to_process
+                   The only way we can get here is that we've already searched this board.
+                   There's no need to do that again, but let's double-check.
                 */
-                bump("rediscovered");
+                if all_boards.get(&new_board.id).unwrap().searched() {
+                    bump("rediscovered_searched");
+                } else {
+                    bump("rediscovered_UNsearched");
+                }
             } else {
                 to_process.push(new_board.id);
                 to_insert.insert(new_board.id, new_board);
