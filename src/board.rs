@@ -55,7 +55,7 @@ pub struct Board {
     multipliers: Vec<Position>,
     cumulative_score: u32,
     searched: bool,
-    words: Option<Vec<FoundWord>>,
+    words: Vec<FoundWord>,
     evolved_via: Option<FoundWord>,
     evolved_from: Option<u64>,
 }
@@ -111,7 +111,7 @@ impl Board {
                 .iter()
                 .map(|p| Position::new(p.0, p.1))
                 .collect(),
-            words: None,
+            words: vec![],
             cumulative_score: 0,
             evolved_via: Some(FoundWord {
                 path: vec![],
@@ -140,7 +140,12 @@ impl Board {
             self.searched,
             "I haven't been searched yet! No words for you!"
         );
-        self.words.as_ref().unwrap()
+        self.words.as_ref()
+    }
+
+    pub fn set_words(&mut self, words: Vec<FoundWord>) {
+        self.words = words;
+        self.searched = true;
     }
 
     pub fn evolved_via(&self) -> FoundWord {
@@ -263,7 +268,7 @@ impl Board {
             tiles: new_tiles,
             multipliers: new_mults,
             cumulative_score: self.cumulative_score + found_word.score,
-            words: None,
+            words: vec![],
             evolved_via: Some(found_word),
             evolved_from: Some(self.id),
             searched: false,
@@ -272,10 +277,10 @@ impl Board {
 
     pub fn is_terminal(&self) -> bool {
         assert!(self.searched, "idk if I'm terminal, nobody's looked!");
-        self.words.as_ref().unwrap().len() == 0
+        self.words.len() == 0
     }
 
-    pub fn find_words(&mut self, dict: &Dictionary) {
+    pub fn find_words(&self, dict: &Dictionary) -> Vec<FoundWord> {
         let mut found_words = Vec::new();
         for row in 0..self.height + 1 {
             for col in 0..self.width + 1 {
@@ -286,8 +291,7 @@ impl Board {
         }
 
         found_words.sort_by(|a, b| b.score.cmp(&a.score));
-        self.words = Some(found_words);
-        self.searched = true;
+        found_words
     }
 
     fn finds_words_in_starting_from(&self, dict: &Dictionary, start: Position) -> Vec<FoundWord> {

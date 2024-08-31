@@ -1,6 +1,7 @@
 use crate::board::Board;
 use crate::dictionary::Dictionary;
 use indicatif::{ProgressBar, ProgressStyle};
+use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -98,7 +99,6 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
     })
     .expect("Error setting Ctrl-C handler");
 
-    let mut stats = HashMap::new();
     let mut all_boards = HashMap::new();
     let mut terminal_boards = HashSet::new();
     let mut to_process = Vec::new();
@@ -108,109 +108,122 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
     to_process.push(starting_board.id);
     all_boards.insert(starting_board.id, starting_board);
 
-    let bar = ProgressBar::new(1);
-    bar.set_style(
-        ProgressStyle::with_template(
-            "[{elapsed} {wide_bar:.blue} {human_pos:>}/{human_len} @ {per_sec}",
-        )
-        .unwrap()
-        .progress_chars("-> "),
-    );
-
-    let mut bump = |name: &str| {
-        stats
-            .entry(name.to_owned())
-            .and_modify(|c| *c += 1)
-            .or_insert(1);
-    };
-
     let dict = Dictionary::new(dict_path);
+    let mut generation = 1;
     while !to_process.is_empty() {
-        bump("total_processed");
-        let board_id = to_process.pop().unwrap();
-        let b = all_boards.get_mut(&board_id).unwrap();
+        let bar = ProgressBar::new(to_process.len() as u64 * 2);
+        bar.set_style(
+            ProgressStyle::with_template(
+                "Gen {msg} {elapsed} {wide_bar:.blue} {human_pos:>}/{human_len}",
+            )
+            .unwrap()
+            .progress_chars("-> "),
+        );
+        bar.set_message(format!("{: >2}", generation));
 
-        if b.searched() {
-            bump("already_searched");
-            bar.inc(1);
-            continue;
-        }
+        // Search the boards in this generation, provided they're not somehow dupes
+        let newly_searched = to_process
+            .par_iter()
+            .map(|board_id| {
+                let b = all_boards.get(&board_id).unwrap();
 
-        if terminal_boards.contains(&b.id) {
-            bump("already_found_terminal");
-            bar.inc(1);
-            continue;
-        }
-
-        b.find_words(&dict);
-        bump("total_searched");
-
-        // Now that we're done mutating, let's replace `b` with an immutable reference
-        let b = all_boards.get(&board_id).unwrap();
-
-        if b.is_terminal() {
-            bump("found_terminal");
-            terminal_boards.insert(board_id);
-            // Technically we don't need to update since  we'll find it in terminal_boards.
-            // BUT this makes me feel better and technically saves a hash lookup
-            //all_boards.insert(b.id, b);
-            bar.inc(1);
-            continue;
-        }
-
-        // To keep all_boards references immutable, let's keep a separate list of all the
-        // Boards we're going to add to all_boards.
-        let mut to_insert = HashMap::new();
-        for found_word in b.words().clone() {
-            let new_board = b.evolve_via(found_word);
-            if to_insert.contains_key(&new_board.id) {
-                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
-                // (e.g. for higher score) and what would need to happen if we did. Since this board state
-                // hasn't been searched yet, maybe a simple swap is OK.
-                bump("already_queued_this_board");
-            } else if to_process.contains(&new_board.id) {
-                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
-                // (e.g. for higher score) and what would need to happen if we did. Since this board state
-                // hasn't been searched yet, maybe a simple swap is OK.
-                bump("already_queued_previously");
-            } else if all_boards.contains_key(&new_board.id) {
-                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
-                // (e.g. for higher score) and what would need to happen if we did. Since this board state
-                // **HAS** been searched, we'd need to update any descendants scores with the delta
-                /*
-                   The only way we can get here is that we've already searched this board.
-                   There's no need to do that again, but let's double-check.
-                */
-                if all_boards.get(&new_board.id).unwrap().searched() {
-                    bump("rediscovered_searched");
-                } else {
-                    bump("rediscovered_UNsearched");
+                if b.searched() {
+                    bar.inc(1);
+                    return None;
                 }
-            } else {
-                to_process.push(new_board.id);
-                to_insert.insert(new_board.id, new_board);
-                bar.inc_length(1);
-            }
-        }
 
-        assert!(b.searched(), "We literally just searched!");
+                if terminal_boards.contains(board_id) {
+                    bar.inc(1);
+                    return None;
+                }
 
-        // Now that we found all the new boards, give them to all_boards
-        all_boards.extend(to_insert);
-        bar.inc(1);
+                let words = b.find_words(&dict);
+                bar.inc(1);
+                Some((board_id.clone(), words))
+            })
+            .flatten()
+            .collect::<Vec<(u64, Vec<FoundWord>)>>();
+
+        /*
+        Now do a few things:
+        1. Update the Board (living in all_boards) with its word list
+        2. If the board is terminal, update terminal_boards with its id
+        3. Otherwise, emit the ID as a board to be used next to make the next generation
+         */
+        let boards_to_work = newly_searched
+            .iter()
+            .map(|(board_id, new_words)| {
+                all_boards
+                    .entry(*board_id)
+                    .and_modify(|b| b.set_words(new_words.clone()));
+
+                if new_words.len() == 0 {
+                    terminal_boards.insert(*board_id);
+                    None
+                } else {
+                    Some(*board_id)
+                }
+            })
+            .flatten()
+            .collect::<Vec<u64>>();
+
+        bar.set_length(to_process.len() as u64 + boards_to_work.len() as u64);
+        let boards_to_add = boards_to_work
+            .par_iter()
+            .map(|b_id| {
+                let b = all_boards.get(b_id).unwrap();
+
+                // To keep all_boards references immutable, let's keep a separate list of all the
+                // Boards we're going to add to all_boards.
+                let mut new_boards: HashMap<u64, Board> = HashMap::new();
+                for found_word in b.words().clone() {
+                    let new_board = b.evolve_via(found_word);
+                    if new_boards.contains_key(&new_board.id) {
+                        // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                        // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                        // hasn't been searched yet, maybe a simple swap is OK.
+                        continue;
+                    } else if to_process.contains(&new_board.id) {
+                        // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                        // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                        // hasn't been searched yet, maybe a simple swap is OK.
+                        continue;
+                    } else if all_boards.contains_key(&new_board.id) {
+                        // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                        // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                        // **HAS** been searched, we'd need to update any descendants scores with the delta
+                        continue;
+                    }
+                    new_boards.insert(new_board.id, new_board);
+                }
+                bar.inc(1);
+                new_boards
+            })
+            .flatten()
+            .collect::<HashMap<u64, Board>>();
+
+        // Update to_process with all the new boards we found
+        to_process = boards_to_add
+            .keys()
+            .map(|b_id| b_id.clone())
+            .collect::<Vec<u64>>();
+
+        // And update all_boards with all the new boards we found
+        all_boards.extend(boards_to_add);
+
+        //bar.finish();
+        println!();
+        generation += 1;
 
         if stop_now.load(Ordering::SeqCst) {
             break;
         }
     }
 
-    bar.finish();
-    //dict.print_stats();
-    println!("Stats = {:?}", stats);
     println!("Found {} unique terminal boards", terminal_boards.len());
 
-    let mut final_term_boards = terminal_boards.iter().collect::<Vec<&u64>>();
-    final_term_boards.sort_by(|a, b| {
+    let mut final_term_boards = terminal_boards.into_iter().collect::<Vec<u64>>();
+    final_term_boards.par_sort_by(|a, b| {
         all_boards
             .get(b)
             .unwrap()
