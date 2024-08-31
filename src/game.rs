@@ -5,8 +5,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use r2d2_sqlite::SqliteConnectionManager;
-
 #[allow(dead_code)]
 use crate::board::{FoundWord, Position};
 
@@ -126,10 +124,7 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
             .or_insert(1);
     };
 
-    let manager = SqliteConnectionManager::file(dict_path);
-    let pool = r2d2::Pool::new(manager).unwrap();
-
-    let mut dict = Dictionary::with_conn(pool.get().unwrap());
+    let dict = Dictionary::new(dict_path);
     while !to_process.is_empty() {
         bump("total_processed");
         let board_id = to_process.pop().unwrap();
@@ -147,7 +142,7 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
             continue;
         }
 
-        b.find_words(&mut dict);
+        b.find_words(&dict);
         bump("total_searched");
 
         // Now that we're done mutating, let's replace `b` with an immutable reference
@@ -210,7 +205,7 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
     }
 
     bar.finish();
-    dict.print_stats();
+    //dict.print_stats();
     println!("Stats = {:?}", stats);
     println!("Found {} unique terminal boards", terminal_boards.len());
 

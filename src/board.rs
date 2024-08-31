@@ -275,7 +275,7 @@ impl Board {
         self.words.as_ref().unwrap().len() == 0
     }
 
-    pub fn find_words(&mut self, dict: &mut Dictionary) {
+    pub fn find_words(&mut self, dict: &Dictionary) {
         let mut found_words = Vec::new();
         for row in 0..self.height + 1 {
             for col in 0..self.width + 1 {
@@ -290,11 +290,7 @@ impl Board {
         self.searched = true;
     }
 
-    fn finds_words_in_starting_from(
-        &self,
-        dict: &mut Dictionary,
-        start: Position,
-    ) -> Vec<FoundWord> {
+    fn finds_words_in_starting_from(&self, dict: &Dictionary, start: Position) -> Vec<FoundWord> {
         let mut path = Vec::new();
         path.push(start.clone());
 
@@ -310,7 +306,7 @@ impl Board {
         pos: &Position,
         path: &mut Vec<Position>,
         path_str: &String,
-        dict: &mut Dictionary,
+        dict: &Dictionary,
     ) -> Vec<FoundWord> {
         /*
         We have arrived at pos. From here we need to

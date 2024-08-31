@@ -2,18 +2,17 @@ pub mod board;
 pub mod dictionary;
 mod game;
 
-//use dictionary::Dictionary;
+use dictionary::Dictionary;
 
 fn main() {
     let dictionary_db_name = "dictionary.db";
-    //let mut dict = Dictionary::new(&dictionary_db_name);
-    //dict.init_from("nwl/nwl2020.txt", 3);
+    Dictionary::init_from(dictionary_db_name, "nwl/nwl2020.txt", 3);
 
     let sample_board = vec![
         "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
         "mcisneice".chars().map(|c| c.to_string()).collect(),
         "hcrqsovaa".chars().map(|c| c.to_string()).collect(),
-        "ln.sgsnnr".chars().map(|c| c.to_string()).collect(),
+        // "ln.sgsnnr".chars().map(|c| c.to_string()).collect(),
         // "eiusyijme".chars().map(|c| c.to_string()).collect(),
         // "olmgapelf".chars().map(|c| c.to_string()).collect(),
         // "tsaeeudhn".chars().map(|c| c.to_string()).collect(),
