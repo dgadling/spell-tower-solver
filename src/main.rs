@@ -13,7 +13,7 @@ fn main() {
         "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
         "mcisneice".chars().map(|c| c.to_string()).collect(),
         "hcrqsovaa".chars().map(|c| c.to_string()).collect(),
-        // "ln.sgsnnr".chars().map(|c| c.to_string()).collect(),
+        "ln.sgsnnr".chars().map(|c| c.to_string()).collect(),
         // "eiusyijme".chars().map(|c| c.to_string()).collect(),
         // "olmgapelf".chars().map(|c| c.to_string()).collect(),
         // "tsaeeudhn".chars().map(|c| c.to_string()).collect(),
