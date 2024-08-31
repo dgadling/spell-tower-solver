@@ -12,6 +12,7 @@ pub struct Dictionary {
     path_cache: HashMap<String, bool>,
     path_queries: u64,
     path_hits: u64,
+    path_queries_by_length: HashMap<usize, u64>,
     word_queries: u64,
     word_hits: u64,
 }
@@ -58,6 +59,7 @@ impl Dictionary {
             path_cache: HashMap::new(),
             path_queries: 0,
             path_hits: 0,
+            path_queries_by_length: HashMap::new(),
             word_queries: 0,
             word_hits: 0,
         }
@@ -120,28 +122,38 @@ impl Dictionary {
 
     pub fn print_stats(&self) {
         println!(
-            "has_path: queries = {}, hits {}, hit ratio = {:.4}, db queries = {}",
+            "has_path: queries = {}, hits {}, hit ratio = {}, db queries = {}",
             self.path_queries,
             self.path_hits,
             100.0 * (self.path_hits as f64 / self.path_queries as f64),
             self.path_queries - self.path_hits
         );
         println!(
-            " is_word: queries = {}, hits {}, hit ratio = {:.4}, db queries = {}",
+            " is_word: queries = {}, hits {}, hit ratio = {}, db queries = {}",
             self.word_queries,
             self.word_hits,
             100.0 * (self.word_hits as f64 / self.word_queries as f64),
             self.word_queries - self.word_hits
         );
+        println!("path_queries_by_length = {:?}", self.path_queries_by_length);
     }
 
     pub fn has_path(&mut self, prefix: &str) -> bool {
         self.path_queries += 1;
+        self.path_queries_by_length
+            .entry(prefix.len())
+            .and_modify(|c| *c += 1)
+            .or_insert(1);
         if let Some(ans) = self.path_cache.get(prefix) {
             self.path_hits += 1;
             return *ans;
         }
 
+        if prefix.len() > 15 {
+            // We don't have any words longer than this!
+            self.path_cache.insert(prefix.to_string(), false);
+            return false;
+        }
         // NOTE: Using the FTS5 table for prefix matching is SEVERAL ORDERS OF MAGNITUDE faster!
         let query = format!(
             "SELECT 1 FROM optimized_words WHERE word MATCH '{}*'",
@@ -162,6 +174,12 @@ impl Dictionary {
         if let Some(ans) = self.word_cache.get(prefix) {
             self.word_hits += 1;
             return *ans;
+        }
+
+        if prefix.len() > 15 {
+            // We don't haev any words longer than this!
+            self.path_cache.insert(prefix.to_string(), false);
+            return false;
         }
 
         // NOTE: Going the normaly route is SIGNIFICANTLY faster for straight equality checking
