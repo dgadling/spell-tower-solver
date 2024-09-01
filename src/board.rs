@@ -280,7 +280,7 @@ impl Board {
         self.words.len() == 0
     }
 
-    pub fn find_words(&self, dict: &Dictionary) -> Vec<FoundWord> {
+    pub fn find_words(&self, dict: &Dictionary, top_n: usize) -> Vec<FoundWord> {
         let mut found_words = Vec::new();
         for row in 0..self.height + 1 {
             for col in 0..self.width + 1 {
@@ -292,6 +292,9 @@ impl Board {
 
         found_words.sort_by(|a, b| b.score.cmp(&a.score));
         found_words
+            .into_iter()
+            .take(top_n)
+            .collect::<Vec<FoundWord>>()
     }
 
     fn finds_words_in_starting_from(&self, dict: &Dictionary, start: Position) -> Vec<FoundWord> {
