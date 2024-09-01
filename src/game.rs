@@ -90,7 +90,12 @@ fn id_test() {
     println!("b1.id = {}, b2.id = {}", b1.id, b2.id);
 }
 
-pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize, usize)>) {
+pub fn play_game(
+    dict_path: &str,
+    board: Vec<Vec<String>>,
+    mult_locs: Vec<(usize, usize)>,
+    max_children: usize,
+) {
     let stop_now = Arc::new(AtomicBool::new(false));
     let r = stop_now.clone();
 
@@ -137,7 +142,7 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
                     return None;
                 }
 
-                let words = b.find_words(&dict);
+                let words = b.find_words(&dict, max_children);
                 bar.inc(1);
                 Some((board_id.clone(), words))
             })
@@ -168,53 +173,62 @@ pub fn play_game(dict_path: &str, board: Vec<Vec<String>>, mult_locs: Vec<(usize
             .collect::<Vec<u64>>();
 
         bar.set_length(to_process.len() as u64 + boards_to_work.len() as u64);
-        let boards_to_add = boards_to_work
-            .par_iter()
-            .map(|b_id| {
-                let b = all_boards.get(b_id).unwrap();
 
-                // To keep all_boards references immutable, let's keep a separate list of all the
-                // Boards we're going to add to all_boards.
-                let mut new_boards: HashMap<u64, Board> = HashMap::new();
-                for found_word in b.words().clone() {
-                    let new_board = b.evolve_via(found_word);
-                    if new_boards.contains_key(&new_board.id) {
-                        // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
-                        // (e.g. for higher score) and what would need to happen if we did. Since this board state
-                        // hasn't been searched yet, maybe a simple swap is OK.
-                        continue;
-                    } else if to_process.contains(&new_board.id) {
-                        // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
-                        // (e.g. for higher score) and what would need to happen if we did. Since this board state
-                        // hasn't been searched yet, maybe a simple swap is OK.
-                        continue;
-                    } else if all_boards.contains_key(&new_board.id) {
-                        // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
-                        // (e.g. for higher score) and what would need to happen if we did. Since this board state
-                        // **HAS** been searched, we'd need to update any descendants scores with the delta
-                        continue;
-                    }
-                    new_boards.insert(new_board.id, new_board);
-                }
-                bar.inc(1);
-                new_boards
+        let new_to_process = boards_to_work
+            .chunks(100)
+            .map(|boards| {
+                let boards_to_add = boards
+                    .par_iter()
+                    .map(|b_id| {
+                        let b = all_boards.get(b_id).unwrap();
+
+                        // To keep all_boards references immutable, let's keep a separate list of all the
+                        // Boards we're going to add to all_boards.
+                        let mut new_boards: HashMap<u64, Board> = HashMap::new();
+                        for found_word in b.words().clone() {
+                            let new_board = b.evolve_via(found_word);
+                            if new_boards.contains_key(&new_board.id) {
+                                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                                // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                                // hasn't been searched yet, maybe a simple swap is OK.
+                                continue;
+                            } else if to_process.contains(&new_board.id) {
+                                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                                // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                                // hasn't been searched yet, maybe a simple swap is OK.
+                                continue;
+                            } else if all_boards.contains_key(&new_board.id) {
+                                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                                // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                                // **HAS** been searched, we'd need to update any descendants scores with the delta
+                                continue;
+                            }
+                            new_boards.insert(new_board.id, new_board);
+                        }
+                        bar.inc(1);
+                        new_boards
+                    })
+                    .flatten()
+                    .collect::<HashMap<u64, Board>>();
+
+                // Update to_process with all the new boards we found
+                let batch_new_to_process = boards_to_add
+                    .keys()
+                    .map(|b_id| b_id.clone())
+                    .collect::<Vec<u64>>();
+
+                // And update all_boards with all the new boards we found
+                all_boards.extend(boards_to_add);
+                batch_new_to_process
             })
             .flatten()
-            .collect::<HashMap<u64, Board>>();
-
-        // Update to_process with all the new boards we found
-        to_process = boards_to_add
-            .keys()
-            .map(|b_id| b_id.clone())
             .collect::<Vec<u64>>();
-
-        // And update all_boards with all the new boards we found
-        all_boards.extend(boards_to_add);
 
         //bar.finish();
         println!();
         generation += 1;
 
+        to_process = new_to_process;
         if stop_now.load(Ordering::SeqCst) {
             break;
         }
