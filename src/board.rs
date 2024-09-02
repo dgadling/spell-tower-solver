@@ -6,6 +6,8 @@ use std::{fmt, hash::Hash};
 
 use crate::dictionary::Dictionary;
 
+use deepsize::DeepSizeOf;
+
 // Taken from https://en.wikipedia.org/wiki/Scrabble_letter_distributions but
 // this is clearly not what's used in SpellTower.
 static LETTER_SCORES: phf::Map<char, u32> = phf_map! {
@@ -39,19 +41,20 @@ static LETTER_SCORES: phf::Map<char, u32> = phf_map! {
 
 static CLEARS_ROW: phf::Set<char> = phf_set!('j', 'q', 'x', 'z');
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, DeepSizeOf)]
 pub struct FoundWord {
     pub path: Vec<Position>,
     pub word: String,
     pub score: u32,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, DeepSizeOf)]
 pub struct Board {
     pub id: u64,
     width: usize,
     height: usize,
     tiles: Vec<Vec<String>>,
+    usable_tiles: usize,
     multipliers: Vec<Position>,
     cumulative_score: u32,
     searched: bool,
@@ -98,6 +101,17 @@ impl Board {
         hasher.finish()
     }
 
+    fn get_usable_tiles(tiles: &Vec<Vec<String>>) -> usize {
+        tiles
+            .iter()
+            .map(|r| {
+                r.iter()
+                    .filter(|c| *c != Board::BLOCK && *c != Board::EMPTY)
+                    .count()
+            })
+            .sum::<usize>()
+    }
+
     pub fn new_from(tiles: Vec<Vec<String>>, multipliers: Vec<(usize, usize)>) -> Self {
         let height = tiles.len() - 1;
         let width = tiles.get(0).unwrap().len() - 1;
@@ -106,6 +120,7 @@ impl Board {
             id: Board::_hash_for(&tiles),
             width,
             height,
+            usable_tiles: Self::get_usable_tiles(&tiles),
             tiles,
             multipliers: multipliers
                 .iter()
@@ -133,6 +148,10 @@ impl Board {
 
     pub fn searched(&self) -> bool {
         self.searched
+    }
+
+    pub fn usable_tiles(&self) -> usize {
+        self.usable_tiles
     }
 
     pub fn words(&self) -> &Vec<FoundWord> {
@@ -265,6 +284,7 @@ impl Board {
             id: Board::_hash_for(&new_tiles),
             width: self.width,
             height: self.height,
+            usable_tiles: Self::get_usable_tiles(&new_tiles),
             tiles: new_tiles,
             multipliers: new_mults,
             cumulative_score: self.cumulative_score + found_word.score,
@@ -389,7 +409,7 @@ impl Board {
     }
 }
 
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq, DeepSizeOf)]
 pub struct Position {
     pub row: usize,
     pub col: usize,

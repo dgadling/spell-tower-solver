@@ -1,6 +1,7 @@
 use crate::board::Board;
 use crate::dictionary::Dictionary;
-use indicatif::{ProgressBar, ProgressStyle};
+use deepsize::DeepSizeOf;
+use indicatif::{HumanBytes, HumanCount, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -116,6 +117,17 @@ pub fn play_game(
     let dict = Dictionary::new(dict_path);
     let mut generation = 1;
     while !to_process.is_empty() {
+        println!(
+            "Getting Ready\nto_process is {} boards & {}",
+            HumanCount(to_process.len() as u64),
+            HumanBytes(to_process.deep_size_of() as u64)
+        );
+        println!(
+            "all_boards is {} boards & {}",
+            HumanCount(all_boards.len() as u64),
+            HumanBytes(all_boards.deep_size_of() as u64)
+        );
+
         let bar = ProgressBar::new(to_process.len() as u64 * 2);
         bar.set_style(
             ProgressStyle::with_template(
