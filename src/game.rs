@@ -136,7 +136,7 @@ pub fn play_game(
             .unwrap()
             .progress_chars("-> "),
         );
-        bar.set_message(format!("{: >2}", generation));
+        bar.set_message(format!("{: >2} - Searching", generation));
 
         // Search the boards in this generation, provided they're not somehow dupes
         let newly_searched = to_process
@@ -184,6 +184,7 @@ pub fn play_game(
             .flatten()
             .collect::<Vec<u64>>();
 
+        bar.set_message(format!("{: >2} - Evolving ", generation));
         bar.set_length(to_process.len() as u64 + boards_to_work.len() as u64);
 
         let new_to_process = boards_to_work
