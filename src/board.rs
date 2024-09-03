@@ -53,6 +53,7 @@ pub struct Board {
     pub id: u64,
     width: usize,
     height: usize,
+    min_word_length: usize,
     tiles: Vec<Vec<String>>,
     usable_tiles: usize,
     multipliers: Vec<Position>,
@@ -112,7 +113,11 @@ impl Board {
             .sum::<usize>()
     }
 
-    pub fn new_from(tiles: Vec<Vec<String>>, multipliers: Vec<(usize, usize)>) -> Self {
+    pub fn new_from(
+        tiles: Vec<Vec<String>>,
+        multipliers: Vec<(usize, usize)>,
+        min_word_length: usize,
+    ) -> Self {
         let height = tiles.len() - 1;
         let width = tiles.get(0).unwrap().len() - 1;
 
@@ -120,6 +125,7 @@ impl Board {
             id: Board::_hash_for(&tiles),
             width,
             height,
+            min_word_length,
             usable_tiles: Self::get_usable_tiles(&tiles),
             tiles,
             multipliers: multipliers
@@ -297,6 +303,7 @@ impl Board {
             id: Board::_hash_for(&new_tiles),
             width: self.width,
             height: self.height,
+            min_word_length: self.min_word_length,
             usable_tiles: Self::get_usable_tiles(&new_tiles),
             tiles: new_tiles,
             multipliers: new_mults,

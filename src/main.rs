@@ -79,7 +79,7 @@ fn size_tests() {
     for board in boards {
         println!("Board\n----------------------------------------");
         println!("  input board = {} bytes", &board.deep_size_of());
-        let mut b = Board::new_from(board, mult_locs.clone());
+        let mut b = Board::new_from(board, mult_locs.clone(), 3);
         println!(" usable tiles = {}", b.usable_tiles());
         println!("board pre-pop = {} bytes", b.deep_size_of());
         let words = b.find_words(&dict, 10_000);

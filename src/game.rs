@@ -55,7 +55,7 @@ fn evolution_test() {
         },
     ];
 
-    let mut b = Board::new_from(sample_board, vec![]);
+    let mut b = Board::new_from(sample_board, vec![], 3);
     println!("Before");
     println!("------");
     println!("{}", b);
@@ -93,8 +93,8 @@ fn id_test() {
         "eiusyijme".chars().map(|c| c.to_string()).collect(), // 4
     ];
 
-    let b1 = Board::new_from(sample_b1, vec![]);
-    let b2 = Board::new_from(sample_b2, vec![]);
+    let b1 = Board::new_from(sample_b1, vec![], 3);
+    let b2 = Board::new_from(sample_b2, vec![], 3);
 
     println!("b1.id = {}, b2.id = {}", b1.id, b2.id);
 }
@@ -104,7 +104,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
     let mut terminal_boards = HashSet::new();
     let mut to_process = Vec::new();
 
-    let starting_board = Board::new_from(board, mult_locs);
+    let starting_board = Board::new_from(board, mult_locs, args.min_word_length);
 
     to_process.push(starting_board.id);
     all_boards.insert(starting_board.id, starting_board);
