@@ -117,20 +117,18 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
     let dict = Dictionary::new(&args.db_path);
     let mut generation = 1;
     while !to_process.is_empty() {
+        print!("Generation {: >2}", generation);
         if args.memory_debug {
-            println!(
-                "Have {} boards to process using {}",
+            print!(
+                ": {} boards to process ({}) ; {} boards total ({})",
                 HumanCount(to_process.len() as u64),
-                HumanBytes(to_process.deep_size_of() as u64)
-            );
-            println!(
-                "Have {} boards in total using {}",
+                HumanBytes(to_process.deep_size_of() as u64),
                 HumanCount(all_boards.len() as u64),
                 HumanBytes(all_boards.deep_size_of() as u64)
             );
         }
+        println!();
 
-        println!("Generation {: >2}", generation);
         let to_process_len = to_process.len() as u64;
         let bar = ProgressBar::new(to_process_len);
         bar.set_style(bar_style.clone());
