@@ -178,13 +178,14 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
                 }
             })
             .flatten()
-            .collect::<Vec<u64>>();
+            .collect::<HashSet<u64>>();
 
         let bar = ProgressBar::new(boards_to_work.len() as u64);
         bar.set_style(bar_style.clone());
         bar.set_message("📈");
 
-        let new_to_process = boards_to_work
+        let boards_to_iter = Vec::from_iter(boards_to_work.iter());
+        let new_to_process = boards_to_iter
             .chunks(args.evolution_batch_size)
             .map(|boards| {
                 let boards_to_add = boards
@@ -237,7 +238,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
                 for board_id in boards {
                     // Now that we've generated our children boards we don't need to hold on
                     // to our tiles any longer
-                    all_boards.entry(*board_id).and_modify(|b| b.clean());
+                    all_boards.entry(**board_id).and_modify(|b| b.clean());
                 }
 
                 // And update all_boards with all the new boards we found
