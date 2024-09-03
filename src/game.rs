@@ -1,5 +1,6 @@
 use crate::board::Board;
 use crate::dictionary::Dictionary;
+use crate::Args;
 
 #[allow(unused_imports)]
 use deepsize::DeepSizeOf;
@@ -98,12 +99,7 @@ fn id_test() {
     println!("b1.id = {}, b2.id = {}", b1.id, b2.id);
 }
 
-pub fn play_game(
-    dict_path: &str,
-    board: Vec<Vec<String>>,
-    mult_locs: Vec<(usize, usize)>,
-    max_children: usize,
-) {
+pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, usize)>) {
     let mut all_boards = HashMap::new();
     let mut terminal_boards = HashSet::new();
     let mut to_process = Vec::new();
@@ -113,32 +109,32 @@ pub fn play_game(
     to_process.push(starting_board.id);
     all_boards.insert(starting_board.id, starting_board);
 
-    let dict = Dictionary::new(dict_path);
+    let bar_style = ProgressStyle::with_template(
+        "{msg} {elapsed} {wide_bar:.blue} {human_pos:>}/{human_len} @ {per_sec}",
+    )
+    .unwrap()
+    .progress_chars("-> ");
+    let dict = Dictionary::new(&args.db_path);
     let mut generation = 1;
     while !to_process.is_empty() {
-        /*
-        println!(
-            "Getting Ready\nto_process is {} boards & {}",
-            HumanCount(to_process.len() as u64),
-            HumanBytes(to_process.deep_size_of() as u64)
-        );
-        println!(
-            "all_boards is {} boards & {}",
-            HumanCount(all_boards.len() as u64),
-            HumanBytes(all_boards.deep_size_of() as u64)
-        );
-        */
+        if args.memory_debug {
+            println!(
+                "Have {} boards to process using {}",
+                HumanCount(to_process.len() as u64),
+                HumanBytes(to_process.deep_size_of() as u64)
+            );
+            println!(
+                "Have {} boards in total using {}",
+                HumanCount(all_boards.len() as u64),
+                HumanBytes(all_boards.deep_size_of() as u64)
+            );
+        }
 
+        println!("Generation {: >2}", generation);
         let to_process_len = to_process.len() as u64;
-        let bar = ProgressBar::new(to_process_len * 2);
-        bar.set_style(
-            ProgressStyle::with_template(
-                "Gen {msg} {elapsed} {wide_bar:.blue} {human_pos:>}/{human_len}",
-            )
-            .unwrap()
-            .progress_chars("-> "),
-        );
-        bar.set_message(format!("{: >2} - Searching", generation));
+        let bar = ProgressBar::new(to_process_len);
+        bar.set_style(bar_style.clone());
+        bar.set_message("🔎");
 
         // Search the boards in this generation, provided they're not somehow dupes
         let newly_searched = to_process
@@ -156,7 +152,7 @@ pub fn play_game(
                     return None;
                 }
 
-                let words = b.find_words(&dict, max_children);
+                let words = b.find_words(&dict, args.max_children);
                 bar.inc(1);
                 Some((board_id.clone(), words))
             })
@@ -186,11 +182,12 @@ pub fn play_game(
             .flatten()
             .collect::<Vec<u64>>();
 
-        bar.set_message(format!("{: >2} - Evolving ", generation));
-        bar.set_length(to_process_len + boards_to_work.len() as u64);
+        let bar = ProgressBar::new(boards_to_work.len() as u64);
+        bar.set_style(bar_style.clone());
+        bar.set_message("📈");
 
         let new_to_process = boards_to_work
-            .chunks(100)
+            .chunks(args.evolution_batch_size)
             .map(|boards| {
                 let boards_to_add = boards
                     .par_iter()
@@ -228,7 +225,6 @@ pub fn play_game(
                             }
                             new_boards.insert(new_board.id, new_board);
                         }
-                        //bar.inc(1);
                         new_boards
                     })
                     .flatten()
@@ -248,13 +244,12 @@ pub fn play_game(
 
                 // And update all_boards with all the new boards we found
                 all_boards.extend(boards_to_add);
-                bar.inc(100);
+                bar.inc(boards.len() as u64);
                 batch_new_to_process
             })
             .flatten()
             .collect::<Vec<u64>>();
 
-        //bar.finish();
         println!();
         generation += 1;
 

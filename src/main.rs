@@ -3,8 +3,38 @@ pub mod dictionary;
 mod game;
 
 use board::Board;
+use clap::Parser;
 use deepsize::DeepSizeOf;
 use dictionary::Dictionary;
+
+/// Figure out the optimial set of moves in a game of SpellTower
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+pub struct Args {
+    /// Path of the dictionary to use
+    #[arg(long, default_value = "nwl/nwl2020.txt")]
+    dict_path: String,
+
+    /// Path of the dictionary database file to use
+    #[arg(long, default_value = "dictionary.db")]
+    db_path: String,
+
+    /// Maximum number of children each board can spawn.
+    #[arg(short = 'c', long, default_value_t = 9)]
+    max_children: usize,
+
+    /// Minimum length of a word we'll consider valid
+    #[arg(short = 'w', long, default_value_t = 3)]
+    min_word_length: usize,
+
+    /// Show memory debugging info
+    #[arg(long, default_value_t = false)]
+    memory_debug: bool,
+
+    /// Evolution batch size
+    #[arg(long, default_value_t = 100)]
+    evolution_batch_size: usize,
+}
 
 #[allow(dead_code)]
 fn size_tests() {
@@ -81,8 +111,8 @@ fn size_tests() {
 }
 
 fn main() {
-    let dictionary_db_name = "dictionary.db";
-    Dictionary::init_from(dictionary_db_name, "nwl/nwl2020.txt", 3);
+    let args = Args::parse();
+    Dictionary::init_from(&args.db_path, &args.dict_path, args.min_word_length);
 
     let sample_board = vec![
         "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
@@ -101,5 +131,5 @@ fn main() {
     ];
 
     let mult_locs: Vec<(usize, usize)> = vec![(0, 8), (1, 2), (9, 6)];
-    game::play_game(dictionary_db_name, sample_board, mult_locs, 10);
+    game::play_game(&args, sample_board, mult_locs);
 }
