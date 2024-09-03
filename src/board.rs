@@ -167,10 +167,10 @@ impl Board {
         self.searched = true;
     }
 
-    pub fn empty_tiles(&mut self) {
-        // We need something in this slot because I don't want to deal with Option
-        // So keep it small
+    pub fn clean(&mut self) {
+        // Now that the board has been fully processed, free up some memory
         self.tiles = vec![];
+        self.words = vec![];
     }
 
     pub fn evolved_via(&self) -> FoundWord {
@@ -533,7 +533,7 @@ impl Position {
     pub fn south_east(&self, width: usize, height: usize) -> Option<Position> {
         let c = Position::new_at(self.row + 1, self.col + 1);
 
-        if c.col as usize> width || c.row as usize> height {
+        if c.col as usize > width || c.row as usize > height {
             return None;
         }
         Some(c)

@@ -101,5 +101,5 @@ fn main() {
     ];
 
     let mult_locs: Vec<(usize, usize)> = vec![(0, 8), (1, 2), (9, 6)];
-    game::play_game(dictionary_db_name, sample_board, mult_locs, 15_000);
+    game::play_game(dictionary_db_name, sample_board, mult_locs, 10);
 }

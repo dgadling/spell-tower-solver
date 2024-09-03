@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ctrlc = "3.4"
 deepsize = { version = "0.2.0" }
 indicatif = { version = "0.17.8", features = ["improved_unicode", "rayon"] }
 phf = { version = "0.11.2", features = ["macros"] }

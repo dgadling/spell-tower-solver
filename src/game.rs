@@ -1,10 +1,17 @@
 use crate::board::Board;
 use crate::dictionary::Dictionary;
+
+#[allow(unused_imports)]
 use deepsize::DeepSizeOf;
+
+#[allow(unused_imports)]
 use indicatif::{HumanBytes, HumanCount, ProgressBar, ProgressStyle};
+
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
+#[allow(unused_imports)]
 use std::sync::atomic::{AtomicBool, Ordering};
+#[allow(unused_imports)]
 use std::sync::Arc;
 
 #[allow(dead_code)]
@@ -97,14 +104,6 @@ pub fn play_game(
     mult_locs: Vec<(usize, usize)>,
     max_children: usize,
 ) {
-    let stop_now = Arc::new(AtomicBool::new(false));
-    let r = stop_now.clone();
-
-    ctrlc::set_handler(move || {
-        r.store(true, Ordering::SeqCst);
-    })
-    .expect("Error setting Ctrl-C handler");
-
     let mut all_boards = HashMap::new();
     let mut terminal_boards = HashSet::new();
     let mut to_process = Vec::new();
@@ -117,6 +116,7 @@ pub fn play_game(
     let dict = Dictionary::new(dict_path);
     let mut generation = 1;
     while !to_process.is_empty() {
+        /*
         println!(
             "Getting Ready\nto_process is {} boards & {}",
             HumanCount(to_process.len() as u64),
@@ -127,8 +127,10 @@ pub fn play_game(
             HumanCount(all_boards.len() as u64),
             HumanBytes(all_boards.deep_size_of() as u64)
         );
+        */
 
-        let bar = ProgressBar::new(to_process.len() as u64 * 2);
+        let to_process_len = to_process.len() as u64;
+        let bar = ProgressBar::new(to_process_len * 2);
         bar.set_style(
             ProgressStyle::with_template(
                 "Gen {msg} {elapsed} {wide_bar:.blue} {human_pos:>}/{human_len}",
@@ -185,7 +187,7 @@ pub fn play_game(
             .collect::<Vec<u64>>();
 
         bar.set_message(format!("{: >2} - Evolving ", generation));
-        bar.set_length(to_process.len() as u64 + boards_to_work.len() as u64);
+        bar.set_length(to_process_len + boards_to_work.len() as u64);
 
         let new_to_process = boards_to_work
             .chunks(100)
@@ -200,25 +202,33 @@ pub fn play_game(
                         let mut new_boards: HashMap<u64, Board> = HashMap::new();
                         for found_word in b.words().clone() {
                             let new_board = b.evolve_via(found_word);
+
+                            // Now let's check if this new board is *actually* new
                             if new_boards.contains_key(&new_board.id) {
                                 // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
                                 // (e.g. for higher score) and what would need to happen if we did. Since this board state
                                 // hasn't been searched yet, maybe a simple swap is OK.
+
+                                // One of our siblings (with the same/higher score) has the same net-effect, skip this one
                                 continue;
-                            } else if to_process.contains(&new_board.id) {
+                            } else if boards_to_work.contains(&new_board.id) {
                                 // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
                                 // (e.g. for higher score) and what would need to happen if we did. Since this board state
                                 // hasn't been searched yet, maybe a simple swap is OK.
+
+                                // b managed to evolve one of it siblings, skip it
                                 continue;
                             } else if all_boards.contains_key(&new_board.id) {
                                 // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
                                 // (e.g. for higher score) and what would need to happen if we did. Since this board state
                                 // **HAS** been searched, we'd need to update any descendants scores with the delta
+
+                                // This board was born in a previous generation
                                 continue;
                             }
                             new_boards.insert(new_board.id, new_board);
                         }
-                        bar.inc(1);
+                        //bar.inc(1);
                         new_boards
                     })
                     .flatten()
@@ -226,18 +236,19 @@ pub fn play_game(
 
                 // Update to_process with all the new boards we found
                 let batch_new_to_process = boards_to_add
-                    .keys()
-                    .map(|b_id| b_id.clone())
+                    .par_iter()
+                    .map(|(b_id, _)| b_id.clone())
                     .collect::<Vec<u64>>();
 
                 for board_id in boards {
                     // Now that we've generated our children boards we don't need to hold on
                     // to our tiles any longer
-                    all_boards.entry(*board_id).and_modify(|b| b.empty_tiles());
+                    all_boards.entry(*board_id).and_modify(|b| b.clean());
                 }
 
                 // And update all_boards with all the new boards we found
                 all_boards.extend(boards_to_add);
+                bar.inc(100);
                 batch_new_to_process
             })
             .flatten()
@@ -248,12 +259,12 @@ pub fn play_game(
         generation += 1;
 
         to_process = new_to_process;
-        if stop_now.load(Ordering::SeqCst) {
-            break;
-        }
     }
 
-    println!("Found {} unique terminal boards", terminal_boards.len());
+    println!(
+        "Found {} unique terminal boards",
+        HumanCount(terminal_boards.len() as u64)
+    );
 
     let mut final_term_boards = terminal_boards.into_iter().collect::<Vec<u64>>();
     final_term_boards.par_sort_by(|a, b| {
@@ -268,6 +279,7 @@ pub fn play_game(
 
     println!("Highest scoring had a score of {}", winner.get_score());
 
+    // From our winning terimal board, work backwards up to the starting board
     let mut winning_path = vec![];
     let mut curr_board = winner;
     loop {
@@ -280,6 +292,7 @@ pub fn play_game(
             .get(&all_boards.get(&curr_board.id).unwrap().evolved_from())
             .unwrap();
     }
+    // Now reverse that so winning_path is a list of moves to make from the beginning
     winning_path.reverse();
     println!("Using a path of: {:?}", winning_path);
 }
