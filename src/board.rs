@@ -325,6 +325,11 @@ impl Board {
         for row in 0..self.height + 1 {
             for col in 0..self.width + 1 {
                 let start = Position::new(row, col);
+                if self.tiles[row][col] == Board::EMPTY || self.tiles[row][col] == Board::BLOCK {
+                    // No words start with a space, or can start on a blocked tile. Skip them.
+                    continue;
+                }
+
                 let found = self.finds_words_in_starting_from(dict, start);
                 found_words.extend(found);
             }
