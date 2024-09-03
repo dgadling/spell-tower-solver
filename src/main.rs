@@ -115,21 +115,21 @@ fn main() {
     Dictionary::init_from(&args.db_path, &args.dict_path, args.min_word_length);
 
     let sample_board = vec![
-        "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
-        "mcisneice".chars().map(|c| c.to_string()).collect(),
-        "hcrqsovaa".chars().map(|c| c.to_string()).collect(),
-        "ln.sgsnnr".chars().map(|c| c.to_string()).collect(),
-        "eiusyijme".chars().map(|c| c.to_string()).collect(),
-        "olmgapelf".chars().map(|c| c.to_string()).collect(),
-        "tsaeeudhn".chars().map(|c| c.to_string()).collect(),
-        "bsoenditr".chars().map(|c| c.to_string()).collect(),
-        "cwoopteaf".chars().map(|c| c.to_string()).collect(),
-        "itzoutner".chars().map(|c| c.to_string()).collect(),
-        ".upriigal".chars().map(|c| c.to_string()).collect(),
-        "tkayee.ld".chars().map(|c| c.to_string()).collect(),
-        "xlihcrras".chars().map(|c| c.to_string()).collect(),
+        "aesdnpchn".chars().map(|c| c.to_string()).collect(),
+        "ilcsiroze".chars().map(|c| c.to_string()).collect(),
+        "osltarmte".chars().map(|c| c.to_string()).collect(),
+        "ste.uenfi".chars().map(|c| c.to_string()).collect(),
+        "edyc.umih".chars().map(|c| c.to_string()).collect(),
+        "btpryslrf".chars().map(|c| c.to_string()).collect(),
+        "awqbhpxka".chars().map(|c| c.to_string()).collect(),
+        "ag.sncopi".chars().map(|c| c.to_string()).collect(),
+        "tadegtjne".chars().map(|c| c.to_string()).collect(),
+        "reicsieeo".chars().map(|c| c.to_string()).collect(),
+        "sigsiatmn".chars().map(|c| c.to_string()).collect(),
+        ".srnuolor".chars().map(|c| c.to_string()).collect(),
+        "evdoallui".chars().map(|c| c.to_string()).collect(),
     ];
 
-    let mult_locs: Vec<(usize, usize)> = vec![(0, 8), (1, 2), (9, 6)];
+    let mult_locs: Vec<(usize, usize)> = vec![(4, 1), (9, 1), (11, 5)];
     game::play_game(&args, sample_board, mult_locs);
 }
