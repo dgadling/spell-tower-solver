@@ -229,6 +229,12 @@ pub fn play_game(
                     .map(|b_id| b_id.clone())
                     .collect::<Vec<u64>>();
 
+                for board_id in boards {
+                    // Now that we've generated our children boards we don't need to hold on
+                    // to our tiles any longer
+                    all_boards.entry(*board_id).and_modify(|b| b.empty_tiles());
+                }
+
                 // And update all_boards with all the new boards we found
                 all_boards.extend(boards_to_add);
                 batch_new_to_process

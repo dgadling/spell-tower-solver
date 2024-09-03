@@ -167,6 +167,12 @@ impl Board {
         self.searched = true;
     }
 
+    pub fn empty_tiles(&mut self) {
+        // We need something in this slot because I don't want to deal with Option
+        // So keep it small
+        self.tiles = vec![];
+    }
+
     pub fn evolved_via(&self) -> FoundWord {
         self.evolved_via.to_owned().unwrap()
     }
@@ -180,7 +186,11 @@ impl Board {
     }
 
     fn _get<'a, 'b>(tiles: &'a Vec<Vec<String>>, pos: &'b Position) -> &'a String {
-        tiles.get(pos.row).unwrap().get(pos.col).unwrap()
+        tiles
+            .get(pos.row as usize)
+            .unwrap()
+            .get(pos.col as usize)
+            .unwrap()
     }
 
     fn find_path_of_destruction(&self, found_word: &FoundWord) -> Vec<Position> {
@@ -198,7 +208,10 @@ impl Board {
                     }
 
                     let p = found_word.path.get(idx).unwrap();
-                    Some((0..=self.width).map(|c| Position { row: p.row, col: c }))
+                    Some((0..=self.width).map(|c| Position {
+                        row: p.row,
+                        col: c as u8,
+                    }))
                 })
                 .flatten()
                 .collect::<Vec<Position>>(),
@@ -236,7 +249,7 @@ impl Board {
         let mut new_tiles = self.tiles.clone();
 
         for p in path_of_destruction {
-            new_tiles[p.row][p.col] = Board::EMPTY.to_string();
+            new_tiles[p.row as usize][p.col as usize] = Board::EMPTY.to_string();
         }
 
         new_tiles
@@ -250,18 +263,18 @@ impl Board {
         // No need to start any lower than the first blown up row
         for r in (1..=path_of_destruction[0].row).rev() {
             for c in 0..tiles.get(0).unwrap().len() {
-                if !tiles.get(r).unwrap().get(c).unwrap().eq(" ") {
+                if !tiles[r as usize][c as usize].eq(Board::EMPTY) {
                     continue;
                 }
 
                 for row in (0..=r - 1).rev() {
-                    let above = Board::_get(&tiles, &Position { row, col: c });
+                    let above = Board::_get(&tiles, &Position { row, col: c as u8 });
                     if above.eq(" ") {
                         continue;
                     }
 
-                    tiles.get_mut(r).unwrap()[c] = above.clone();
-                    tiles.get_mut(row).unwrap()[c] = Board::EMPTY.to_string();
+                    tiles.get_mut(r as usize).unwrap()[c as usize] = above.clone();
+                    tiles.get_mut(row as usize).unwrap()[c as usize] = Board::EMPTY.to_string();
                     break;
                 }
             }
@@ -411,8 +424,8 @@ impl Board {
 
 #[derive(Clone, Eq, Hash, PartialEq, DeepSizeOf)]
 pub struct Position {
-    pub row: usize,
-    pub col: usize,
+    pub row: u8,
+    pub col: u8,
 }
 
 impl fmt::Debug for Position {
@@ -423,6 +436,13 @@ impl fmt::Debug for Position {
 
 impl Position {
     pub fn new(row: usize, col: usize) -> Self {
+        Position {
+            row: row as u8,
+            col: col as u8,
+        }
+    }
+
+    fn new_at(row: u8, col: u8) -> Self {
         Position { row, col }
     }
 
@@ -460,22 +480,22 @@ impl Position {
         if self.row == 0 || self.col == 0 {
             return None;
         }
-        Some(Position::new(self.row - 1, self.col - 1))
+        Some(Position::new_at(self.row - 1, self.col - 1))
     }
 
     pub fn north(&self, _width: usize, _height: usize) -> Option<Position> {
         if self.row == 0 {
             return None;
         }
-        Some(Position::new(self.row - 1, self.col))
+        Some(Position::new_at(self.row - 1, self.col))
     }
 
     pub fn north_east(&self, width: usize, _height: usize) -> Option<Position> {
         if self.row == 0 {
             return None;
         }
-        let c = Position::new(self.row - 1, self.col + 1);
-        if c.col > width {
+        let c = Position::new_at(self.row - 1, self.col + 1);
+        if c.col as usize > width {
             return None;
         }
         Some(c)
@@ -485,35 +505,35 @@ impl Position {
         if self.col == 0 {
             return None;
         }
-        Some(Position::new(self.row, self.col - 1))
+        Some(Position::new_at(self.row, self.col - 1))
     }
 
     pub fn east(&self, width: usize, _height: usize) -> Option<Position> {
-        let c = Position::new(self.row, self.col + 1);
-        if c.col > width {
+        let c = Position::new_at(self.row, self.col + 1);
+        if c.col as usize > width {
             return None;
         }
         Some(c)
     }
 
     pub fn south_west(&self, _width: usize, height: usize) -> Option<Position> {
-        if self.row == height || self.col == 0 {
+        if self.row as usize == height || self.col == 0 {
             return None;
         }
-        Some(Position::new(self.row + 1, self.col - 1))
+        Some(Position::new_at(self.row + 1, self.col - 1))
     }
 
     pub fn south(&self, _width: usize, height: usize) -> Option<Position> {
-        if self.row == height {
+        if self.row as usize == height {
             return None;
         }
-        Some(Position::new(self.row + 1, self.col))
+        Some(Position::new_at(self.row + 1, self.col))
     }
 
     pub fn south_east(&self, width: usize, height: usize) -> Option<Position> {
-        let c = Position::new(self.row + 1, self.col + 1);
+        let c = Position::new_at(self.row + 1, self.col + 1);
 
-        if c.col > width || c.row > height {
+        if c.col as usize> width || c.row as usize> height {
             return None;
         }
         Some(c)
