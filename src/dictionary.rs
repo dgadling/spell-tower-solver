@@ -36,7 +36,7 @@ impl Dictionary {
                 if !args.quiet {
                     println!("Look at the db and found {} rows", count);
                 }
-                if count == 192_234 {
+                if count == 192_243 {
                     if !args.quiet {
                         println!("Sounds about right");
                     }

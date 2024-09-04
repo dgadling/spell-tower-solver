@@ -16484,6 +16484,7 @@ braced
 bracer
 braces
 brachs
+bracks
 bracts
 braggy
 brahma
@@ -34886,6 +34887,7 @@ carling
 carlins
 carlish
 carload
+carlots
 carmine
 carnage
 carnets
@@ -127043,6 +127045,7 @@ exahertzes
 exaltation
 examinable
 examinants
+examinings
 exanthemas
 exaptation
 exarchates
@@ -152452,6 +152455,7 @@ inventorial
 inventoried
 inventories
 invernesses
+invertebrae
 investigate
 investiture
 investments
@@ -178553,12 +178557,14 @@ intoxicatedly
 intoxications
 intracellular
 intracerebral
+intracervical
 intradermally
 intragalactic
 intramuscular
 intransigeant
 intransigence
 intransigents
+intransitives
 intraocularly
 intrapersonal
 intrapreneurs
@@ -185650,6 +185656,7 @@ intractability
 intracutaneous
 intrafallopian
 intramolecular
+intraoperative
 intransigeance
 intransigeants
 intransigences
@@ -192232,3 +192239,5 @@ xenotransplants
 xerographically
 xeroradiography
 zoogeographical
+neovascularisation
+neovascularization
