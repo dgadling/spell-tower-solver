@@ -89,9 +89,21 @@ impl fmt::Display for FoundWord {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} for {} points via {:?}",
-            self.word, self.score, self.path
+            "{} - {} pts via {}",
+            self.word,
+            self.score,
+            self.path
+                .iter()
+                .map(|p| format!("{}", p))
+                .collect::<Vec<String>>()
+                .join(", ")
         )
+    }
+}
+
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}, {})", self.row, self.col)
     }
 }
 

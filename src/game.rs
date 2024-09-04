@@ -267,10 +267,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
         to_process = new_to_process;
     }
 
-    println!(
-        "Found {} unique terminal boards",
-        HumanCount(terminal_boards.len() as u64)
-    );
+    let term_count = terminal_boards.len();
 
     let mut final_term_boards = terminal_boards.into_iter().collect::<Vec<u64>>();
     final_term_boards.par_sort_by(|a, b| {
@@ -283,8 +280,6 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
 
     let winner = all_boards.get(final_term_boards.get(0).unwrap()).unwrap();
 
-    println!("Highest scoring had a score of {}", winner.get_score());
-
     // From our winning terimal board, work backwards up to the starting board
     let mut winning_path = vec![];
     let mut curr_board = winner;
@@ -293,12 +288,37 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
             break;
         }
 
-        winning_path.push(curr_board.evolved_via().word);
+        winning_path.push(curr_board.evolved_via());
         curr_board = all_boards
             .get(&all_boards.get(&curr_board.id).unwrap().evolved_from())
             .unwrap();
     }
     // Now reverse that so winning_path is a list of moves to make from the beginning
     winning_path.reverse();
-    println!("Using a path of: {:?}", winning_path);
+
+    if args.quiet {
+        println!(
+            "{: >5} via {: >2} words",
+            HumanCount(winner.get_score() as u64),
+            winning_path.len()
+        );
+
+        for p in winning_path {
+            println!(
+                "{: >15}: {:?}",
+                p.word,
+                p.path
+                    .iter()
+                    .map(|pos| format!("{}", pos))
+                    .collect::<Vec<String>>()
+            )
+        }
+    } else {
+        println!(
+            "Found {} unique terminal boards",
+            HumanCount(term_count as u64)
+        );
+        println!("Highest scoring had a score of {}", winner.get_score());
+        println!("Using a path of: {:?}", winning_path);
+    }
 }
