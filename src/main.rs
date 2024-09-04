@@ -129,19 +129,22 @@ fn main() {
     Dictionary::init_from(&args);
 
     let sample_board = vec![
-        "aesdnpchn".chars().map(|c| c.to_string()).collect(),
-        "ilcsiroze".chars().map(|c| c.to_string()).collect(),
-        "osltarmte".chars().map(|c| c.to_string()).collect(),
-        "ste.uenfi".chars().map(|c| c.to_string()).collect(),
-        "edyc.umih".chars().map(|c| c.to_string()).collect(),
-        "btpryslrf".chars().map(|c| c.to_string()).collect(),
-        "awqbhpxka".chars().map(|c| c.to_string()).collect(),
-        "ag.sncopi".chars().map(|c| c.to_string()).collect(),
-        "tadegtjne".chars().map(|c| c.to_string()).collect(),
-        "reicsieeo".chars().map(|c| c.to_string()).collect(),
-        "sigsiatmn".chars().map(|c| c.to_string()).collect(),
-        ".srnuolor".chars().map(|c| c.to_string()).collect(),
-        "evdoallui".chars().map(|c| c.to_string()).collect(),
+        /*
+         012345678
+        */
+        "esekaleen".chars().map(|c| c.to_string()).collect(), //  0
+        "duisehunm".chars().map(|c| c.to_string()).collect(), //  1
+        "ridco.set".chars().map(|c| c.to_string()).collect(), //  2
+        "dorson..n".chars().map(|c| c.to_string()).collect(), //  3
+        "riagawtni".chars().map(|c| c.to_string()).collect(), //  4
+        "sphiuulbe".chars().map(|c| c.to_string()).collect(), //  5
+        "hrsnccelt".chars().map(|c| c.to_string()).collect(), //  6
+        "epasiqrot".chars().map(|c| c.to_string()).collect(), //  7
+        "searycope".chars().map(|c| c.to_string()).collect(), //  8
+        "sis.vgild".chars().map(|c| c.to_string()).collect(), //  9
+        "afbroyizm".chars().map(|c| c.to_string()).collect(), // 10
+        "jmtatatlp".chars().map(|c| c.to_string()).collect(), // 11
+        "flgxcneoi".chars().map(|c| c.to_string()).collect(), // 12
     ];
 
     let mult_locs: Vec<(usize, usize)> = vec![(4, 1), (9, 1), (11, 5)];
