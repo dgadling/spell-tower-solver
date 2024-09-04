@@ -2,6 +2,8 @@ pub mod board;
 pub mod dictionary;
 mod game;
 
+use std::str::FromStr;
+
 use board::Board;
 use clap::Parser;
 use deepsize::DeepSizeOf;
@@ -44,7 +46,8 @@ pub struct Args {
 #[allow(dead_code)]
 fn size_tests() {
     let args = Args {
-        db_path: String::new(),
+        db_path: String::from_str("dictionary.db").unwrap(),
+        start_max_children: None,
         max_children: 0,
         memory_debug: false,
         min_word_length: 3,
@@ -105,8 +108,8 @@ fn size_tests() {
         let words_word_sizes = words.iter().map(|w| w.word.deep_size_of()).sum::<usize>();
         let words_path_sizes = words.iter().map(|w| w.path.deep_size_of()).sum::<usize>();
         let total_positions = words.iter().map(|w| w.path.len()).sum::<usize>();
-        println!("words words = {} bytes", words_word_sizes);
-        println!("words paths = {} bytes", words_path_sizes);
+        println!("words word = {} bytes", words_word_sizes);
+        println!("words path = {} bytes", words_path_sizes);
         println!("words paths total positions = {}", total_positions);
 
         let w1 = words[0].clone();
@@ -121,6 +124,8 @@ fn size_tests() {
 
         b.set_words(words);
         println!("board ful-pop = {} bytes", b.deep_size_of());
+        b.clean();
+        println!("board cleaned = {} bytes", b.deep_size_of());
     }
 }
 
