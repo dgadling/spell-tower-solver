@@ -245,12 +245,6 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
                     .map(|(b_id, _)| b_id.clone())
                     .collect::<Vec<u64>>();
 
-                for board_id in boards {
-                    // Now that we've generated our children boards we don't need to hold on
-                    // to our tiles any longer
-                    all_boards.entry(**board_id).and_modify(|b| b.clean());
-                }
-
                 // And update all_boards with all the new boards we found
                 all_boards.extend(boards_to_add);
                 bar.inc(boards.len() as u64);
@@ -259,12 +253,47 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
             .flatten()
             .collect::<Vec<u64>>();
 
+        // Now clean up everything that's "dirty"
+        let boards_to_clean = all_boards
+            .keys()
+            .collect::<Vec<&u64>>()
+            .into_par_iter()
+            .filter_map(|k| {
+                if new_to_process.contains(k) || !all_boards.get(k).unwrap().dirty() {
+                    None
+                } else {
+                    Some(k.clone())
+                }
+            })
+            .collect::<Vec<u64>>();
+
+        let bar: ProgressBar;
+        if args.quiet {
+            bar = ProgressBar::hidden();
+        } else {
+            bar = ProgressBar::new(boards_to_clean.len() as u64);
+            bar.set_style(bar_style.clone());
+            bar.set_message("🧹");
+        }
+
+        for board_id in boards_to_clean {
+            all_boards.entry(board_id).and_modify(|b| b.clean());
+            bar.inc(1);
+        }
+
         if !args.quiet {
             println!();
         }
         generation += 1;
 
         to_process = new_to_process;
+        if !args.quiet && args.memory_debug {
+            println!(
+                "  After cleaning {} boards total ({})",
+                HumanCount(all_boards.len() as u64),
+                HumanBytes(all_boards.deep_size_of() as u64)
+            );
+        }
     }
 
     let term_count = terminal_boards.len();

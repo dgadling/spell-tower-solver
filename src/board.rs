@@ -62,6 +62,7 @@ pub struct Board {
     words: Vec<FoundWord>,
     evolved_via: Option<FoundWord>,
     evolved_from: Option<u64>,
+    cleaned: bool,
 }
 
 impl fmt::Display for Board {
@@ -153,6 +154,7 @@ impl Board {
             }),
             evolved_from: Some(0),
             searched: false,
+            cleaned: false,
         }
     }
 
@@ -185,10 +187,17 @@ impl Board {
         self.searched = true;
     }
 
+    pub fn dirty(&self) -> bool {
+        !self.cleaned
+    }
+
     pub fn clean(&mut self) {
-        // Now that the board has been fully processed, free up some memory
-        self.tiles = vec![];
-        self.words = vec![];
+        if !self.cleaned {
+            // Now that the board has been fully processed, free up some memory
+            self.tiles = vec![];
+            self.words = vec![];
+            self.cleaned = true;
+        }
     }
 
     pub fn evolved_via(&self) -> FoundWord {
@@ -324,6 +333,7 @@ impl Board {
             evolved_via: Some(found_word),
             evolved_from: Some(self.id),
             searched: false,
+            cleaned: false,
         }
     }
 
