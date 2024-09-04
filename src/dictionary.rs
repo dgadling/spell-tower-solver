@@ -1,3 +1,4 @@
+use crate::Args;
 use indicatif::{ProgressBar, ProgressStyle};
 use rusqlite::Connection;
 use std::collections::HashSet;
@@ -10,48 +11,64 @@ pub struct Dictionary {
 }
 
 impl Dictionary {
-    pub fn new(db_path: &str) -> Self {
+    pub fn new(args: &Args) -> Self {
         let mut d = Dictionary {
             word_cache: HashSet::new(),
             path_cache: HashSet::new(),
         };
 
-        d.prime_caches(db_path);
+        d.prime_caches(&args);
         d
     }
 
-    pub fn init_from(db_path: &str, source_file: &str, min_word_len: usize) {
-        println!("Checking database integrity");
-        let conn = Connection::open(db_path)
-            .unwrap_or_else(|e| panic!("Couldn't open {}: {}", db_path, e));
+    pub fn init_from(args: &Args) {
+        if !args.quiet {
+            println!("Checking database integrity");
+        }
+        let conn = Connection::open(&args.db_path)
+            .unwrap_or_else(|e| panic!("Couldn't open {}: {}", args.db_path, e));
         let rows_res = conn.query_row("SELECT count(*) FROM words", [], |r| {
             r.get::<usize, usize>(0)
         });
 
         match rows_res {
             Ok(count) => {
-                println!("Look at the db and found {} rows", count);
+                if !args.quiet {
+                    println!("Look at the db and found {} rows", count);
+                }
                 if count == 191_745 {
-                    println!("Sounds about right");
+                    if !args.quiet {
+                        println!("Sounds about right");
+                    }
                     return;
                 }
             }
             _ => {}
         };
 
-        println!("That doesn't look right. Trying to load data.");
-        Dictionary::init_db(db_path, source_file, min_word_len);
+        if !args.quiet {
+            println!("That doesn't look right. Trying to load data.");
+        }
+        Dictionary::init_db(&args);
     }
 
-    fn init_db(db_path: &str, source_file: &str, min_word_len: usize) {
-        println!("Creating database of valid words from {}", source_file);
-        let in_lines = BufReader::new(File::open(source_file).expect("Couldn't read?!"))
+    fn init_db(args: &Args) {
+        if !args.quiet {
+            println!("Creating database of valid words from {}", &args.dict_path);
+        }
+        let in_lines = BufReader::new(File::open(&args.dict_path).expect("Couldn't read?!"))
             .lines()
             .map(|l| l.unwrap());
 
-        let conn = Connection::open(db_path)
-            .unwrap_or_else(|e| panic!("Couldn't open {}: {}", db_path, e));
-        let bar = ProgressBar::new(191745);
+        let conn = Connection::open(&args.db_path)
+            .unwrap_or_else(|e| panic!("Couldn't open {}: {}", args.db_path, e));
+
+        let bar: ProgressBar;
+        if args.quiet {
+            bar = ProgressBar::hidden();
+        } else {
+            bar = ProgressBar::new(191745);
+        }
 
         conn.execute(
             "
@@ -68,37 +85,34 @@ impl Dictionary {
 
         conn.execute("BEGIN TRANSACTION", ())
             .unwrap_or_else(|e| panic!("Couldn't even start a transaction: {}", e));
-        in_lines.filter(|l| l.len() >= min_word_len).for_each(|w| {
-            conn.execute(
-                "INSERT INTO words (word, base_points) VALUES (?1, ?2)",
-                (&w, 1),
-            )
-            .unwrap_or_else(|e| panic!("Couldn't insert {} into the database: {}", w, e));
-            bar.inc(1)
-        });
+        in_lines
+            .filter(|l| l.len() >= args.min_word_length)
+            .for_each(|w| {
+                conn.execute(
+                    "INSERT INTO words (word, base_points) VALUES (?1, ?2)",
+                    (&w, 1),
+                )
+                .unwrap_or_else(|e| panic!("Couldn't insert {} into the database: {}", w, e));
+                bar.inc(1)
+            });
         bar.finish();
         conn.execute("COMMIT", ())
             .unwrap_or_else(|e| panic!("Couldn't commit the transaction: {}", e));
-
-        println!("Optimizing");
-        conn.execute_batch(
-            "
-                CREATE INDEX words_word ON words(word);
-                CREATE VIRTUAL TABLE optimized_words USING FTS5(word);
-                INSERT INTO optimized_words(word) SELECT word FROM words;
-                ",
-        )
-        .unwrap_or_else(|e| panic!("Failed to optimize: {}", e));
-
-        println!("Done init-ing!");
     }
 
-    fn prime_caches(&mut self, db_path: &str) {
-        println!("Priming caches");
-        let conn = Connection::open(db_path)
-            .unwrap_or_else(|e| panic!("Couldn't open {}: {}", db_path, e));
+    fn prime_caches(&mut self, args: &Args) {
+        if !args.quiet {
+            println!("Priming caches");
+        }
+        let conn = Connection::open(&args.db_path)
+            .unwrap_or_else(|e| panic!("Couldn't open {}: {}", &args.db_path, e));
 
-        let bar = ProgressBar::new(191745);
+        let bar: ProgressBar;
+        if args.quiet {
+            bar = ProgressBar::hidden();
+        } else {
+            bar = ProgressBar::new(191745);
+        }
         bar.set_style(
             ProgressStyle::with_template(
                 "{msg} {elapsed} {wide_bar:.blue} {human_pos:>}/{human_len}",

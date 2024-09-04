@@ -6,6 +6,7 @@ use board::Board;
 use clap::Parser;
 use deepsize::DeepSizeOf;
 use dictionary::Dictionary;
+use indicatif::HumanDuration;
 
 /// Figure out the optimial set of moves in a game of SpellTower
 #[derive(Parser, Debug)]
@@ -20,7 +21,7 @@ pub struct Args {
     db_path: String,
 
     /// Maximum number of children each board can spawn.
-    #[arg(short = 'c', long, default_value_t = 9)]
+    #[arg(short = 'c', long, default_value_t = 5)]
     max_children: usize,
 
     /// Minimum length of a word we'll consider valid
@@ -34,11 +35,24 @@ pub struct Args {
     /// Evolution batch size
     #[arg(long, default_value_t = 100)]
     evolution_batch_size: usize,
+
+    /// Quiet - don't show any output: overrides --memory-debug
+    #[arg(short, long, default_value_t = false)]
+    quiet: bool,
 }
 
 #[allow(dead_code)]
 fn size_tests() {
-    let dictionary_db_name = "dictionary.db";
+    let args = Args {
+        db_path: String::new(),
+        max_children: 0,
+        memory_debug: false,
+        min_word_length: 3,
+        evolution_batch_size: 0,
+        quiet: false,
+        dict_path: "dictionary.db".to_string(),
+    };
+
     let boards = vec![
         vec![
             "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
@@ -74,7 +88,7 @@ fn size_tests() {
 
     let mult_locs: Vec<(usize, usize)> = vec![(0, 8), (1, 2), (9, 6)];
 
-    let dict = Dictionary::new(&dictionary_db_name);
+    let dict = Dictionary::new(&args);
 
     for board in boards {
         println!("Board\n----------------------------------------");
@@ -112,7 +126,7 @@ fn size_tests() {
 
 fn main() {
     let args = Args::parse();
-    Dictionary::init_from(&args.db_path, &args.dict_path, args.min_word_length);
+    Dictionary::init_from(&args);
 
     let sample_board = vec![
         "aesdnpchn".chars().map(|c| c.to_string()).collect(),
@@ -131,5 +145,8 @@ fn main() {
     ];
 
     let mult_locs: Vec<(usize, usize)> = vec![(4, 1), (9, 1), (11, 5)];
+
+    let game_run_time = std::time::Instant::now();
     game::play_game(&args, sample_board, mult_locs);
+    println!("Finished in {}", HumanDuration(game_run_time.elapsed()));
 }

@@ -114,25 +114,30 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
     )
     .unwrap()
     .progress_chars("-> ");
-    let dict = Dictionary::new(&args.db_path);
+
+    let dict = Dictionary::new(&args);
     let mut generation = 1;
     while !to_process.is_empty() {
-        print!("Generation {: >2}", generation);
-        if args.memory_debug {
-            print!(
-                ": {} boards to process ({}) ; {} boards total ({})",
-                HumanCount(to_process.len() as u64),
-                HumanBytes(to_process.deep_size_of() as u64),
-                HumanCount(all_boards.len() as u64),
-                HumanBytes(all_boards.deep_size_of() as u64)
-            );
-        }
-        println!();
-
         let to_process_len = to_process.len() as u64;
-        let bar = ProgressBar::new(to_process_len);
-        bar.set_style(bar_style.clone());
-        bar.set_message("🔎");
+        let bar: ProgressBar;
+        if args.quiet {
+            bar = ProgressBar::hidden();
+        } else {
+            bar = ProgressBar::new(to_process_len);
+            bar.set_style(bar_style.clone());
+            bar.set_message("🔎");
+            print!("Generation {: >2}", generation);
+            if args.memory_debug {
+                print!(
+                    ": {} boards to process ({}) ; {} boards total ({})",
+                    HumanCount(to_process.len() as u64),
+                    HumanBytes(to_process.deep_size_of() as u64),
+                    HumanCount(all_boards.len() as u64),
+                    HumanBytes(all_boards.deep_size_of() as u64)
+                );
+            }
+            println!();
+        }
 
         // Search the boards in this generation, provided they're not somehow dupes
         let newly_searched = to_process
@@ -180,9 +185,14 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
             .flatten()
             .collect::<HashSet<u64>>();
 
-        let bar = ProgressBar::new(boards_to_work.len() as u64);
-        bar.set_style(bar_style.clone());
-        bar.set_message("📈");
+        let bar: ProgressBar;
+        if args.quiet {
+            bar = ProgressBar::hidden();
+        } else {
+            bar = ProgressBar::new(to_process_len);
+            bar.set_style(bar_style.clone());
+            bar.set_message("📈");
+        }
 
         let boards_to_iter = Vec::from_iter(boards_to_work.iter());
         let new_to_process = boards_to_iter
@@ -249,7 +259,9 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
             .flatten()
             .collect::<Vec<u64>>();
 
-        println!();
+        if !args.quiet {
+            println!();
+        }
         generation += 1;
 
         to_process = new_to_process;
