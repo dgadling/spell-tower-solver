@@ -22,6 +22,10 @@ pub struct Args {
     #[arg(long, default_value = "dictionary.db")]
     db_path: String,
 
+    /// Starting max number of children each board can spawn. Setting this forces quiet mode!
+    #[arg(short = 's', long)]
+    start_max_children: Option<usize>,
+
     /// Maximum number of children each board can spawn.
     #[arg(short = 'c', long, default_value_t = 5)]
     max_children: usize,
@@ -130,7 +134,7 @@ fn size_tests() {
 }
 
 fn main() {
-    let args = Args::parse();
+    let mut args = Args::parse();
     Dictionary::init_from(&args);
 
     let sample_board = vec![
@@ -155,6 +159,16 @@ fn main() {
     let mult_locs: Vec<(usize, usize)> = vec![(4, 1), (9, 1), (11, 5)];
 
     let game_run_time = std::time::Instant::now();
-    game::play_game(&args, sample_board, mult_locs);
-    println!("Finished in {}", HumanDuration(game_run_time.elapsed()));
+    if let Some(start) = args.start_max_children {
+        for child_count in start..=args.max_children {
+            args.max_children = child_count;
+            game::play_game(&args, sample_board.clone(), mult_locs.clone());
+        }
+    } else {
+        game::play_game(&args, sample_board, mult_locs);
+    }
+
+    if !args.quiet {
+        println!("Finished in {}", HumanDuration(game_run_time.elapsed()));
+    }
 }
