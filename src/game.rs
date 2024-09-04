@@ -252,7 +252,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
                 batch_new_to_process
             })
             .flatten()
-            .collect::<Vec<u64>>();
+            .collect::<HashSet<u64>>();
         bar.finish();
 
         // Now clean up everything that's "dirty"
@@ -289,14 +289,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
         }
         generation += 1;
 
-        to_process = new_to_process;
-        if !args.quiet && args.memory_debug {
-            println!(
-                "  After cleaning {} boards total ({})",
-                HumanCount(all_boards.len() as u64),
-                HumanBytes(all_boards.deep_size_of() as u64)
-            );
-        }
+        to_process = Vec::from_iter(new_to_process.into_iter());
     }
 
     let term_count = terminal_boards.len();
