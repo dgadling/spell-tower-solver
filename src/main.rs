@@ -29,7 +29,7 @@ pub struct Args {
     start_max_children: Option<usize>,
 
     /// Maximum number of children each board can spawn.
-    #[arg(short = 'c', long, default_value_t = 5)]
+    #[arg(short = 'c', long, default_value_t = 3)]
     max_children: usize,
 
     /// Minimum length of a word we'll consider valid
@@ -49,7 +49,7 @@ pub struct Args {
     quiet: bool,
 
     /// Input board
-    #[clap(value_parser, default_value = "-")]
+    #[clap(value_parser, default_value = "sample-input/board-1.ron")]
     input_f: Input,
 }
 

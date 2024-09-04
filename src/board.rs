@@ -1,4 +1,5 @@
 use phf::{phf_map, phf_set};
+use std::cmp::max;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::hash::Hasher;
@@ -351,11 +352,42 @@ impl Board {
             }
         }
 
-        found_words.sort_by(|a, b| b.score.cmp(&a.score));
+        let num_words_found = found_words.len();
+
+        if num_words_found == 0 || num_words_found == top_n {
+            return found_words;
+        }
+
+        let partition_size = 3;
+        if top_n % partition_size == 0 {
+            let per_section = max(1, top_n / partition_size);
+            let middle = found_words.len() / 2;
+
+            found_words.sort_by(|a, b| b.score.cmp(&a.score));
+
+            let mut new_words = Vec::with_capacity(top_n);
+            new_words.extend(found_words[0..per_section].iter().map(|w| w.clone()));
+            new_words.extend(
+                found_words[middle..(middle + per_section)]
+                    .iter()
+                    .map(|w| w.clone()),
+            );
+            new_words.extend(
+                found_words[(found_words.len() - per_section)..]
+                    .iter()
+                    .map(|w| w.clone()),
+            );
+
+            return new_words;
+        } else {
+            return found_words;
+        }
+        /*
         found_words
             .into_iter()
             .take(top_n)
             .collect::<Vec<FoundWord>>()
+        */
     }
 
     fn finds_words_in_starting_from(&self, dict: &Dictionary, start: Position) -> Vec<FoundWord> {
