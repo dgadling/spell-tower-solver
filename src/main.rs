@@ -2,13 +2,15 @@ pub mod board;
 pub mod dictionary;
 mod game;
 
-use std::str::FromStr;
+use std::{io::Read, str::FromStr};
 
 use board::Board;
 use clap::Parser;
+use clio::*;
 use deepsize::DeepSizeOf;
 use dictionary::Dictionary;
 use indicatif::HumanDuration;
+use serde::{Deserialize, Serialize};
 
 /// Figure out the optimial set of moves in a game of SpellTower
 #[derive(Parser, Debug)]
@@ -45,6 +47,10 @@ pub struct Args {
     /// Quiet - don't show any output: overrides --memory-debug
     #[arg(short, long, default_value_t = false)]
     quiet: bool,
+
+    /// Input board
+    #[clap(value_parser, default_value = "-")]
+    input_f: Input,
 }
 
 #[allow(dead_code)]
@@ -58,6 +64,7 @@ fn size_tests() {
         evolution_batch_size: 0,
         quiet: false,
         dict_path: "dictionary.db".to_string(),
+        input_f: Input::new("-").unwrap(),
     };
 
     let boards = vec![
@@ -133,39 +140,42 @@ fn size_tests() {
     }
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+struct InputBoard {
+    board: Vec<String>,
+    mults: Vec<(usize, usize)>,
+}
+
 fn main() {
     let mut args = Args::parse();
     Dictionary::init_from(&args);
 
-    let sample_board = vec![
-        /*
-         012345678
-        */
-        "esekaleen".chars().map(|c| c.to_string()).collect(), //  0
-        "duisehunm".chars().map(|c| c.to_string()).collect(), //  1
-        "ridco.set".chars().map(|c| c.to_string()).collect(), //  2
-        "dorson..n".chars().map(|c| c.to_string()).collect(), //  3
-        "riagawtni".chars().map(|c| c.to_string()).collect(), //  4
-        "sphiuulbe".chars().map(|c| c.to_string()).collect(), //  5
-        "hrsnccelt".chars().map(|c| c.to_string()).collect(), //  6
-        "epasiqrot".chars().map(|c| c.to_string()).collect(), //  7
-        "searycope".chars().map(|c| c.to_string()).collect(), //  8
-        "sis.vgild".chars().map(|c| c.to_string()).collect(), //  9
-        "afbroyizm".chars().map(|c| c.to_string()).collect(), // 10
-        "jmtatatlp".chars().map(|c| c.to_string()).collect(), // 11
-        "flgxcneoi".chars().map(|c| c.to_string()).collect(), // 12
-    ];
+    let mut input_str = String::new();
+    args.input_f
+        .read_to_string(&mut input_str)
+        .unwrap_or_else(|e| panic!("Error reading {}: {}", args.input_f.path(), e));
+    let input_board: InputBoard = ron::from_str(&input_str).unwrap_or_else(|e| {
+        panic!(
+            "{} doesn't look like the right kind of file: {}",
+            args.input_f.path(),
+            e
+        )
+    });
 
-    let mult_locs: Vec<(usize, usize)> = vec![(4, 1), (9, 1), (11, 5)];
+    let tiles = input_board
+        .board
+        .iter()
+        .map(|r| r.chars().map(|c| c.to_string()).collect::<Vec<String>>())
+        .collect::<Vec<Vec<String>>>();
 
     let game_run_time = std::time::Instant::now();
     if let Some(start) = args.start_max_children {
         for child_count in start..=args.max_children {
             args.max_children = child_count;
-            game::play_game(&args, sample_board.clone(), mult_locs.clone());
+            game::play_game(&args, tiles.clone(), input_board.mults.clone())
         }
     } else {
-        game::play_game(&args, sample_board, mult_locs);
+        game::play_game(&args, tiles, input_board.mults.clone())
     }
 
     if !args.quiet {

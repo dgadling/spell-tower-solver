@@ -1,0 +1,22 @@
+InputBoard(
+    board: [
+        "esekaleen",
+        "duisehunm",
+        "ridco.set",
+        "dorson..n",
+        "riagawtni",
+        "sphiuulbe",
+        "hrsnccelt",
+        "epasiqrot",
+        "searycope",
+        "sis.vgild",
+        "afbroyizm",
+        "jmtatatlp",
+        "flgxcneoi",
+    ],
+    mults: [
+        (4, 1),
+        (9, 1),
+        (11, 5),
+    ],
+)
