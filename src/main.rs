@@ -13,7 +13,7 @@ use indicatif::HumanDuration;
 #[command(version, about, long_about = None)]
 pub struct Args {
     /// Path of the dictionary to use
-    #[arg(long, default_value = "nwl/nwl2020.txt")]
+    #[arg(long, default_value = "nwl/nwl2023.txt")]
     dict_path: String,
 
     /// Path of the dictionary database file to use
