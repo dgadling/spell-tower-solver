@@ -123,9 +123,6 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
         if args.quiet {
             bar = ProgressBar::hidden();
         } else {
-            bar = ProgressBar::new(to_process_len);
-            bar.set_style(bar_style.clone());
-            bar.set_message("🔎");
             print!("Generation {: >2}", generation);
             if args.memory_debug {
                 print!(
@@ -137,6 +134,9 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
                 );
             }
             println!();
+            bar = ProgressBar::new(to_process_len);
+            bar.set_style(bar_style.clone());
+            bar.set_message("🔎");
         }
 
         // Search the boards in this generation, provided they're not somehow dupes
@@ -161,6 +161,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
             })
             .flatten()
             .collect::<Vec<(u64, Vec<FoundWord>)>>();
+        bar.finish();
 
         /*
         Now do a few things:
@@ -189,7 +190,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
         if args.quiet {
             bar = ProgressBar::hidden();
         } else {
-            bar = ProgressBar::new(to_process_len);
+            bar = ProgressBar::new(boards_to_work.len() as u64);
             bar.set_style(bar_style.clone());
             bar.set_message("📈");
         }
@@ -252,6 +253,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
             })
             .flatten()
             .collect::<Vec<u64>>();
+        bar.finish();
 
         // Now clean up everything that's "dirty"
         let boards_to_clean = all_boards
@@ -280,6 +282,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
             all_boards.entry(board_id).and_modify(|b| b.clean());
             bar.inc(1);
         }
+        bar.finish();
 
         if !args.quiet {
             println!();
