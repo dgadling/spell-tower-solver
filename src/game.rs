@@ -296,29 +296,27 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
     // Now reverse that so winning_path is a list of moves to make from the beginning
     winning_path.reverse();
 
-    if args.quiet {
-        println!(
-            "{: >5} via {: >2} words",
-            HumanCount(winner.get_score() as u64),
-            winning_path.len()
-        );
-
-        for p in winning_path {
-            println!(
-                "{: >15}: {:?}",
-                p.word,
-                p.path
-                    .iter()
-                    .map(|pos| format!("{}", pos))
-                    .collect::<Vec<String>>()
-            )
-        }
-    } else {
+    if !args.quiet {
         println!(
             "Found {} unique terminal boards",
             HumanCount(term_count as u64)
         );
-        println!("Highest scoring had a score of {}", winner.get_score());
-        println!("Using a path of: {:?}", winning_path);
+    }
+
+    println!(
+        "{: >5} via {: >2} words",
+        HumanCount(winner.get_score() as u64),
+        winning_path.len()
+    );
+
+    for p in winning_path {
+        println!(
+            "{: >15}: {:?}",
+            p.word,
+            p.path
+                .iter()
+                .map(|pos| format!("{}", pos))
+                .collect::<Vec<String>>()
+        )
     }
 }
