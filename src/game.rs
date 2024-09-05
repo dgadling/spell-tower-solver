@@ -116,7 +116,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
     .progress_chars("-> ");
 
     let dict = Dictionary::new(&args);
-    let mut generation = 1;
+    let mut generation = 1_u8;
     while !to_process.is_empty() {
         let to_process_len = to_process.len() as u64;
         let bar: ProgressBar;
@@ -126,9 +126,10 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
             print!("Generation {: >2}", generation);
             if args.memory_debug {
                 print!(
-                    ": {} boards to process ({}) ; {} boards total ({})",
+                    ": {} boards to process ({}) ; {} terminal ; {} boards total ({})",
                     HumanCount(to_process.len() as u64),
                     HumanBytes(to_process.deep_size_of() as u64),
+                    HumanCount(terminal_boards.len() as u64),
                     HumanCount(all_boards.len() as u64),
                     HumanBytes(all_boards.deep_size_of() as u64)
                 );
@@ -287,9 +288,13 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
         if !args.quiet {
             println!();
         }
-        generation += 1;
 
-        to_process = Vec::from_iter(new_to_process.into_iter());
+        generation += 1;
+        if generation > args.max_generations {
+            break;
+        } else {
+            to_process = Vec::from_iter(new_to_process.into_iter());
+        }
     }
 
     let term_count = terminal_boards.len();

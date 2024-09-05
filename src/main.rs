@@ -51,6 +51,10 @@ pub struct Args {
     /// Input board
     #[clap(value_parser, default_value = "sample-input/board-1.ron")]
     input_f: Input,
+
+    /// Max number of generations before we stop
+    #[clap(long, default_value_t = 18)]
+    max_generations: u8,
 }
 
 #[allow(dead_code)]
@@ -65,6 +69,7 @@ fn size_tests() {
         quiet: false,
         dict_path: "dictionary.db".to_string(),
         input_f: Input::new("-").unwrap(),
+        max_generations: 0,
     };
 
     let boards = vec![
