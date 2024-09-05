@@ -1,4 +1,5 @@
 use phf::{phf_map, phf_set};
+use rand::prelude::*;
 use std::cmp::max;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
@@ -358,8 +359,10 @@ impl Board {
             return found_words;
         }
 
+        let mut rng = thread_rng();
         let partition_size = 3;
-        if top_n % partition_size == 0 {
+
+        if rng.gen_bool(5.0 / 100.0) && top_n % partition_size == 0 {
             let per_section = max(1, top_n / partition_size);
             let middle = found_words.len() / 2;
 
@@ -380,14 +383,11 @@ impl Board {
 
             return new_words;
         } else {
-            return found_words;
+            return found_words
+                .into_iter()
+                .take(top_n)
+                .collect::<Vec<FoundWord>>();
         }
-        /*
-        found_words
-            .into_iter()
-            .take(top_n)
-            .collect::<Vec<FoundWord>>()
-        */
     }
 
     fn finds_words_in_starting_from(&self, dict: &Dictionary, start: Position) -> Vec<FoundWord> {
