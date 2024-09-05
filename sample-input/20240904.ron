@@ -22,6 +22,8 @@ InputBoard(
 )
 
 /*
+################################################################################
+# Only using the N top scorers
 cargo run --release -- --memory-debug -c 9 sample-input/20240904.ron
 Found 4,945,308 unique terminal boards
 988 via 10 words
@@ -51,4 +53,7 @@ Found 2,265,282 unique terminal boards
            fuse: ["(11, 8)", "(12, 8)", "(11, 7)", "(11, 6)"]
             rin: ["(12, 0)", "(11, 0)", "(10, 0)"]
 Finished in 9 minutes
+
+################################################################################
+# Using the first/mid/worst scorers
 */
