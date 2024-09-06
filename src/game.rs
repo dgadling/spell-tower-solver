@@ -197,65 +197,81 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
         }
 
         let boards_to_iter = Vec::from_iter(boards_to_work.iter());
-        let new_to_process = boards_to_iter
-            .chunks(args.evolution_batch_size)
-            .map(|boards| {
-                let boards_to_add = boards
-                    .par_iter()
-                    .map(|b_id| {
-                        let b = all_boards.get(b_id).unwrap();
+        let mut new_boards_to_process = boards_to_iter
+            .into_par_iter()
+            .map(|b_id| {
+                let b = all_boards.get(b_id).unwrap();
 
-                        // To keep all_boards references immutable, let's keep a separate list of all the
-                        // Boards we're going to add to all_boards.
-                        let mut new_boards: HashMap<u64, Board> = HashMap::new();
-                        for found_word in b.words().clone() {
-                            let new_board = b.evolve_via(found_word);
+                // To keep all_boards references immutable, let's keep a separate list of all the
+                // Boards we're going to add to all_boards.
+                let mut new_boards: HashSet<Board> = HashSet::new();
+                for found_word in b.words().clone() {
+                    let new_board = b.evolve_via(found_word);
 
-                            // Now let's check if this new board is *actually* new
-                            if new_boards.contains_key(&new_board.id) {
-                                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
-                                // (e.g. for higher score) and what would need to happen if we did. Since this board state
-                                // hasn't been searched yet, maybe a simple swap is OK.
+                    // Now let's check if this new board is *actually* new
+                    if new_boards.contains(&new_board) {
+                        // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                        // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                        // hasn't been searched yet, maybe a simple swap is OK.
 
-                                // One of our siblings (with the same/higher score) has the same net-effect, skip this one
-                                continue;
-                            } else if boards_to_work.contains(&new_board.id) {
-                                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
-                                // (e.g. for higher score) and what would need to happen if we did. Since this board state
-                                // hasn't been searched yet, maybe a simple swap is OK.
+                        // One of our siblings (with the same/higher score) has the same net-effect, skip this one
+                        continue;
+                    } else if boards_to_work.contains(&new_board.id) {
+                        // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                        // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                        // hasn't been searched yet, maybe a simple swap is OK.
 
-                                // b managed to evolve one of it siblings, skip it
-                                continue;
-                            } else if all_boards.contains_key(&new_board.id) {
-                                // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
-                                // (e.g. for higher score) and what would need to happen if we did. Since this board state
-                                // **HAS** been searched, we'd need to update any descendants scores with the delta
+                        // b managed to evolve one of it siblings, skip it
+                        continue;
+                    } else if all_boards.contains_key(&new_board.id) {
+                        // TODO: Figure out if we want to replace all_boards[new_board.id] with this one
+                        // (e.g. for higher score) and what would need to happen if we did. Since this board state
+                        // **HAS** been searched, we'd need to update any descendants scores with the delta
 
-                                // This board was born in a previous generation
-                                continue;
-                            }
-                            new_boards.insert(new_board.id, new_board);
-                        }
-                        new_boards
-                    })
-                    .flatten()
-                    .collect::<HashMap<u64, Board>>();
-
-                // Update to_process with all the new boards we found
-                let batch_new_to_process = boards_to_add
-                    .par_iter()
-                    .map(|(b_id, _)| b_id.clone())
-                    .collect::<Vec<u64>>();
-
-                // And update all_boards with all the new boards we found
-                all_boards.extend(boards_to_add);
-                bar.inc(boards.len() as u64);
-                batch_new_to_process
+                        // This board was born in a previous generation
+                        continue;
+                    }
+                    new_boards.insert(new_board);
+                }
+                bar.inc(1);
+                new_boards
             })
             .flatten()
-            .collect::<HashSet<u64>>();
+            .collect::<Vec<Board>>();
         bar.finish();
 
+        println!("culling");
+        if new_boards_to_process.len() > args.process_cap {
+            // We have too many boards to process. Cull them according to board score
+            println!("  prepping");
+            let mut board_by_score = new_boards_to_process
+                .into_iter()
+                .map(|board| (board.get_score(), board))
+                .collect::<Vec<(u32, Board)>>();
+
+            println!("  sorting");
+            board_by_score.par_sort_by(|a, b| b.0.cmp(&a.0));
+
+            println!("  culling");
+            new_boards_to_process = board_by_score
+                .into_par_iter()
+                .take(args.process_cap)
+                .map(|(_, board)| board)
+                .collect::<Vec<Board>>();
+        }
+
+        println!("mapping");
+        let new_to_process = new_boards_to_process
+            .iter()
+            .map(|b| b.id)
+            .collect::<HashSet<u64>>();
+
+        println!("extending");
+        for b in new_boards_to_process {
+            all_boards.insert(b.id, b);
+        }
+
+        println!("prepping cleaning");
         // Now clean up everything that's "dirty"
         let boards_to_clean = all_boards
             .keys()
@@ -293,7 +309,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
         if generation > args.max_generations {
             break;
         } else {
-            to_process = Vec::from_iter(new_to_process.into_iter());
+            to_process = Vec::from_iter(new_to_process.iter().map(|b| *b));
         }
     }
 

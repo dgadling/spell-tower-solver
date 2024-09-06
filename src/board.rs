@@ -1,6 +1,6 @@
 use phf::{phf_map, phf_set};
-use rand::prelude::*;
-use std::cmp::max;
+//use rand::prelude::*;
+//use std::cmp::max;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::hash::Hasher;
@@ -353,9 +353,10 @@ impl Board {
             }
         }
 
+        /*
         let num_words_found = found_words.len();
 
-        if num_words_found == 0 || num_words_found == top_n {
+        if num_words_found == 0 || top_n >= num_words_found {
             return found_words;
         }
 
@@ -383,11 +384,14 @@ impl Board {
 
             return new_words;
         } else {
-            return found_words
-                .into_iter()
-                .take(top_n)
-                .collect::<Vec<FoundWord>>();
-        }
+            return
+            */
+        found_words.sort_by(|a, b| b.score.cmp(&a.score));
+        found_words
+            .into_iter()
+            .take(top_n)
+            .collect::<Vec<FoundWord>>() //;
+                                         // }
     }
 
     fn finds_words_in_starting_from(&self, dict: &Dictionary, start: Position) -> Vec<FoundWord> {

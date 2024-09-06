@@ -29,7 +29,7 @@ pub struct Args {
     start_max_children: Option<usize>,
 
     /// Maximum number of children each board can spawn.
-    #[arg(short = 'c', long, default_value_t = 3)]
+    #[arg(short = 'c', long, default_value_t = 10_000)]
     max_children: usize,
 
     /// Minimum length of a word we'll consider valid
@@ -55,6 +55,10 @@ pub struct Args {
     /// Max number of generations before we stop
     #[clap(long, default_value_t = 18)]
     max_generations: u8,
+
+    /// Max number of boards to process. When sorted by score, we'll cull anything under this rank
+    #[clap(long, default_value_t = 1_000_000)]
+    process_cap: usize,
 }
 
 #[allow(dead_code)]
@@ -70,6 +74,7 @@ fn size_tests() {
         dict_path: "dictionary.db".to_string(),
         input_f: Input::new("-").unwrap(),
         max_generations: 0,
+        process_cap: 0,
     };
 
     let boards = vec![
