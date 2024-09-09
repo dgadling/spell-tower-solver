@@ -1,3 +1,4 @@
+# DONE. SCORING HAS BEEN SORTED.
 Just recording some scores to try to reverse engineer it.
 
 icicle + 1 block, s, s, r, n, i, o, h, m ; 2nd i is x2 = 180 x 2
@@ -146,27 +147,27 @@ x 10
 y 5
 z 11
 
-  
+
 total = (word_letters * word_len) + (extra_letters * word_len)
 
 suqs + t (from q) = 68 = 15 * 4 + 2 * 4 = 68 :check:
 sten = 24 x 2 :check:
 stone  + eicoag dnd  = 130 = (7 * 5) + ((11 + 10) * 5) = 140...
 stoned + eicoag pnda = 186 = (7 * 5) + ((11 + 11) * 5) = 145...
-      
 
-:check: icicle + 1 block, s, s, r, n, i, o, h, m ; 2nd i is x2 = 180 x 2
+
+:check: icicle + ssrniohm ; 2nd i is x2 = 180 x 2
   - so a block = 0 points since I'm not accounting for it
 :check: ref = 24
 :check: bent = 36
 :check: suqs + t (from q) = 68
 :check: posh = 44
 :check: sync = 48
-:check: cheerleads + l, r, i, y, i, u, m = 370
-:check: clinics = (2nd i = x2) + 2 blocks, s, r, l, e, h, m = 210
-:check: geegaws + s, m, s, s, n, a, o, o, o, t, c, b = 259
-:check: jealousies + 1 block, tadegtoneetollangircii o & last e are 2x = 580 x 4 = 2320
-:check: pastellists + 1 block, ecdiruydeoa = 451
+:check: cheerleads + lriyium = 370
+:check: clinics = (2nd i = x2) + srlehm = 210
+:check: geegaws + smssnaoootcb = 259
+:check: jealousies + tadegtoneetollangircii o & last e are 2x = 580 x 4 = 2320
+:check: pastellists + ecdiruydeoa = 451
 :check: affirmer + 1 block + thiknunoc = 360
 :check: hon = 24
 :check: prize + cmle = 150
@@ -184,23 +185,30 @@ stoned + eicoag pnda = 186 = (7 * 5) + ((11 + 11) * 5) = 145...
 :check: sell = 35
 :check: vau = 21
 
-invoiced (d = x2) + o, a, a, n, j, p, y, s, s, e, p, o = 384 x 2
+invoiced (d = x2) + oaanjpyssepo = 384 x 2
   - 392 ; 8 pts *over* on an 8 letter word
 
 mux + tqbspi = 114
   - 117 ; 3 pts *over* on a 3 letter word
 
-gnathite (n = x2) + block, l, n, r, f, e, a, i , t, p, d, d, l = 344 x 2
+gnathite (n = x2) + lnrfeaitpddl = 344 x 2
   - 360 ; 16 pt *over* on an 8 letter word
 
-kaput + 1 block, x, l, r, o, z = 195
+kaput + xlroz = 195
   - 200 ; 5 *over* on a 5 letter
-
-agaves + 1 block + bwrd = 156
-  - 144 ; 12 points *short* on a 6 letter word
 
 barracks (2nd a = 2x) + qsayipueehxi = 504 x 2 = 1008
   - 512 ; 8 pts *over* on a 8 letter word
+
+sells + lhexree = 140
+  - 145 ; 5 *over* on a 5 letter
+
+rices + lxseneil = 140
+  - 145 ; 5 *over* on a 5 letter
+
+
+agaves + 1 block + bwrd = 156
+  - 144 ; 12 points *short* on a 6 letter word
 
 shinily (2nd i = 2x) + plcgwnfisrj = 385 x 2 = 770
   - 378 ; 7 points *short* on a 7 letter word
@@ -212,13 +220,44 @@ ergometer + lausvict + 1 block = 306
   - 297 ; 9 points *short* on a 9 letter word
 
 founts + lr = 126
-  - 96 ; 30 points on a 6 letter word
+  - 96 ; 30 points _short_ on a 6 letter word
 
 seers + elxlcze = 180
   - 185 ; 5 *short* on a 5 letter
 
-sells + lhexree = 140
-  - 145 ; 5 *over* on a 5 letter
 
-rices + lxseneil = 140
-  - 145 ; 5 *over* on a 5 letter
+## 20240909
+
+### Correct
+var
+quo + cfiny
+bids
+jail + heygu
+sign
+gaper + slnpenue
+nodes + lho
+price + umnaicbjm
+rants + oiohslulne
+rents + epcahmlha
+slath + ictsrnhlr
+stilt + agaoponsn
+fossil + oeoetcsdii
+gapers + aaelnpenue
+prince + ulmaicbjm
+stilts + rlagaoponsn
+fossils + oeoetcndii
+princes + ulsalidcbjm
+simular + hnlldnbcpeit
+princess + oulsalidcbjm
+zoo + seeahbep
+
+### Wrong
+skirt + rxyaearlsl = 195
+  - 190 ; 5 *over* on a 5 letter - fixed when changing `x`
+
+six + rs = 45
+  - 42 ; 3 *over* on a 3 letter -- looks like x is wrong so changing it from 10 to 9 points fixes
+  - NOTE: there's a d above the x that's not getting destroyed
+
+wee = 18
+  - 21 ; 3 pt *under* on a 3 letter ; so w is + 1
