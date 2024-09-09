@@ -33,8 +33,8 @@ static LETTER_SCORES: phf::Map<char, u32> = phf_map! {
     't' => 2,
     'u' => 1,
     'v' => 5,
-    'w' => 4,
-    'x' => 10,
+    'w' => 5,
+    'x' => 9,
     'y' => 5,
     'z' => 11,
 };
