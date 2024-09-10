@@ -520,6 +520,30 @@ mod board_tests {
         let path = to_path![(1, 0), (1, 1), (1, 2), (1, 3), (1, 4)];
         assert_eq!(b.score_for("nodes", &path), 80);
     }
+
+    #[test]
+    /// Here we have a word where there's a line-clearing letter getting
+    /// destructed. Make sure that line-clearing 'j' doesn't cause the 'v' to
+    /// get consumed as well. It shouldn't since it's not carrdinally-adjacent
+    /// to any of the tiles in the word.
+    fn bonus_letters_dont_clear() {
+        let b = Board::new_from(
+            to_board!(".ulsalidc.", "oprincess.", "..bm..j..v"),
+            vec![],
+            3,
+        );
+        let path = to_path![
+            (1, 1),
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (1, 5),
+            (1, 6),
+            (1, 7),
+            (1, 8)
+        ];
+        assert_eq!(b.score_for("princess", &path), 392);
+    }
 }
 
 #[derive(Clone, Eq, Hash, PartialEq, DeepSizeOf)]
