@@ -220,21 +220,18 @@ impl Board {
             .unwrap()
     }
 
-    fn find_path_of_destruction(&self, found_word: &FoundWord) -> Vec<Position> {
-        let mut path_of_destruction: HashSet<Position> =
-            HashSet::from_iter(found_word.path.clone());
+    fn find_path_of_destruction(&self, path: &Vec<Position>, word: &str) -> Vec<Position> {
+        let mut path_of_destruction: HashSet<Position> = HashSet::from_iter(path.clone());
 
         // See if we're *directly* going over any of the row-clearing letters
         path_of_destruction.extend(
-            found_word
-                .word
-                .char_indices()
+            word.char_indices()
                 .filter_map(|(idx, c)| {
                     if !CLEARS_ROW.contains(&c) {
                         return None;
                     }
 
-                    let p = found_word.path.get(idx).unwrap();
+                    let p = path.get(idx).unwrap();
                     Some((0..=self.width).map(|c| Position {
                         row: p.row,
                         col: c as u8,
@@ -246,9 +243,7 @@ impl Board {
 
         // Any blocks get destroyed if any block adjacent to them is destroyed
         path_of_destruction.extend(
-            found_word
-                .path
-                .iter()
+            path.iter()
                 .map(|p| {
                     p.cardinal_neighbors(self.width, self.height)
                         .into_iter()
@@ -258,11 +253,9 @@ impl Board {
                 .collect::<Vec<Position>>(),
         );
 
-        if found_word.path.len() >= 5 {
+        if path.len() >= 5 {
             path_of_destruction.extend(
-                found_word
-                    .path
-                    .iter()
+                path.iter()
                     .map(|p| p.cardinal_neighbors(self.width, self.height))
                     .flatten()
                     .collect::<Vec<Position>>(),
@@ -309,7 +302,8 @@ impl Board {
     }
 
     pub fn evolve_via(&self, found_word: FoundWord) -> Board {
-        let mut path_of_destruction = self.find_path_of_destruction(&found_word);
+        let mut path_of_destruction =
+            self.find_path_of_destruction(&found_word.path, &found_word.word);
         let mut new_tiles = self.destroy_board(&path_of_destruction);
         Self::apply_gravity(&mut new_tiles, &mut path_of_destruction);
 
@@ -435,11 +429,16 @@ impl Board {
     }
 
     fn score_for(&self, word: &str, path: &Vec<Position>) -> u32 {
-        // Base score is the sum of all of the letter values
-        let base_score = word
-            .chars()
-            .into_iter()
-            .map(|c| LETTER_SCORES.get(&c).unwrap())
+        // Base score is the sum of _all_ the letter values
+        let base_score = self
+            .find_path_of_destruction(path, word)
+            .iter()
+            .map(|p| {
+                LETTER_SCORES
+                    .get(&self.get(p).chars().next().unwrap())
+                    .cloned()
+                    .unwrap_or_default()
+            })
             .sum::<u32>();
 
         /*
@@ -447,12 +446,79 @@ impl Board {
           one of them the multiplier is 2. If you use two of them it's 4.
           If you don't use any of them your multiplier is 1, which does nothing
         */
-        let multiplier = path
-            .iter()
-            .map(|p| if self.multipliers.contains(p) { 2 } else { 1 })
-            .product::<u32>();
+        let multiplier = std::cmp::max(
+            path.iter()
+                .map(|p| if self.multipliers.contains(p) { 2 } else { 0 })
+                .sum::<u32>(),
+            1,
+        );
 
-        base_score * multiplier * word.len() as u32
+        (base_score * word.len() as u32) * multiplier
+    }
+}
+
+#[cfg(test)]
+mod board_tests {
+    use super::*;
+
+    /// Turns 1+ strings into a Vec<Vec<String>> suitable for passing to Board::new_from()
+    macro_rules! to_board {
+        ($($x:expr), *) => {
+            {
+                vec![
+                    $(
+                        $x.chars().map(|c| c.to_string()).collect()
+                    ), *
+                ]
+            }
+        };
+    }
+
+    /// Turns 1+ tuples of (row, col) into a Vec<Position>
+    macro_rules! to_path {
+        ($($x:expr), *) => {
+            {
+                vec![
+                    $(
+                        Position::at($x.0, $x.1)
+                    ), *
+                ]
+            }
+        };
+    }
+
+    #[test]
+    /// A three letter word, other letters don't count
+    fn simple_three() {
+        let b = Board::new_from(to_board!("vis", "asd"), vec![], 3);
+        let path = to_path![(0, 0), (0, 1), (0, 2)];
+        assert_eq!(b.score_for("vis", &path), 21);
+    }
+
+    #[test]
+    /// The word "zoo" is present and the "z" is going to clear the whole line
+    /// its on. The score should reflect that and not include any of the other
+    /// letters
+    fn clearing_three() {
+        let b = Board::new_from(to_board!("seezahbep", "fnsoobksl"), vec![], 3);
+        let path = to_path![(0, 3), (1, 3), (1, 4)];
+        assert_eq!(b.score_for("zoo", &path), 93);
+    }
+
+    #[test]
+    /// A four letter word, other letters don't count
+    fn simple_four() {
+        let b = Board::new_from(to_board!("sign", "asdf"), vec![], 3);
+        let path = to_path![(0, 0), (0, 1), (0, 2), (0, 3)];
+        assert_eq!(b.score_for("sign", &path), 28);
+    }
+
+    #[test]
+    /// A five letter word with three adjacent letters, a space and a block
+    fn simple_five() {
+        let b = Board::new_from(to_board!("lho .", "nodes"), vec![], 3);
+        let path = to_path![(1, 0), (1, 1), (1, 2), (1, 3), (1, 4)];
+        assert_eq!(b.score_for("nodes", &path), 80);
     }
 }
 
@@ -476,7 +542,7 @@ impl Position {
         }
     }
 
-    fn new_at(row: u8, col: u8) -> Self {
+    fn at(row: u8, col: u8) -> Self {
         Position { row, col }
     }
 
@@ -514,21 +580,21 @@ impl Position {
         if self.row == 0 || self.col == 0 {
             return None;
         }
-        Some(Position::new_at(self.row - 1, self.col - 1))
+        Some(Position::at(self.row - 1, self.col - 1))
     }
 
     pub fn north(&self, _width: usize, _height: usize) -> Option<Position> {
         if self.row == 0 {
             return None;
         }
-        Some(Position::new_at(self.row - 1, self.col))
+        Some(Position::at(self.row - 1, self.col))
     }
 
     pub fn north_east(&self, width: usize, _height: usize) -> Option<Position> {
         if self.row == 0 {
             return None;
         }
-        let c = Position::new_at(self.row - 1, self.col + 1);
+        let c = Position::at(self.row - 1, self.col + 1);
         if c.col as usize > width {
             return None;
         }
@@ -539,11 +605,11 @@ impl Position {
         if self.col == 0 {
             return None;
         }
-        Some(Position::new_at(self.row, self.col - 1))
+        Some(Position::at(self.row, self.col - 1))
     }
 
     pub fn east(&self, width: usize, _height: usize) -> Option<Position> {
-        let c = Position::new_at(self.row, self.col + 1);
+        let c = Position::at(self.row, self.col + 1);
         if c.col as usize > width {
             return None;
         }
@@ -554,18 +620,18 @@ impl Position {
         if self.row as usize == height || self.col == 0 {
             return None;
         }
-        Some(Position::new_at(self.row + 1, self.col - 1))
+        Some(Position::at(self.row + 1, self.col - 1))
     }
 
     pub fn south(&self, _width: usize, height: usize) -> Option<Position> {
         if self.row as usize == height {
             return None;
         }
-        Some(Position::new_at(self.row + 1, self.col))
+        Some(Position::at(self.row + 1, self.col))
     }
 
     pub fn south_east(&self, width: usize, height: usize) -> Option<Position> {
-        let c = Position::new_at(self.row + 1, self.col + 1);
+        let c = Position::at(self.row + 1, self.col + 1);
 
         if c.col as usize > width || c.row as usize > height {
             return None;
