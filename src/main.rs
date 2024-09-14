@@ -1,6 +1,7 @@
 pub mod board;
 pub mod dictionary;
 mod game;
+pub mod position;
 
 use std::{io::Read, str::FromStr};
 
