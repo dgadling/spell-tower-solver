@@ -619,7 +619,7 @@ mod board_tests {
     }
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, DeepSizeOf)]
+#[derive(Clone, Eq, Hash, PartialEq, DeepSizeOf, PartialOrd, Ord)]
 pub struct Position {
     pub row: u8,
     pub col: u8,
@@ -735,4 +735,99 @@ impl Position {
         }
         Some(c)
     }
+}
+
+#[cfg(test)]
+mod position_tests {
+    use super::*;
+
+    // Turns 1+ tuples of (row, col) into a `Vec<Position>`
+    macro_rules! to_path {
+        ($($x:expr), *) => {
+            {
+                vec![
+                    $(
+                        Position::at($x.0, $x.1)
+                    ), *
+                ]
+            }
+        };
+    }
+
+    #[test]
+    // A three letter word, other letters don't count
+    pub fn basic_equality() {
+        assert_eq!(Position::new(8, 2), Position::at(8, 2));
+    }
+
+    // Make a function that tests the cardinal neighbors of $position are equal
+    // to $expected
+    macro_rules! make_cardinal_neighbor_testcase {
+        ($test_name:ident, $position:expr, $expected:expr) => {
+            #[test]
+            fn $test_name() {
+                let c = $position;
+
+                let mut expected = $expected;
+                expected.sort();
+
+                let mut result = c.cardinal_neighbors(2, 2);
+                result.sort();
+                assert_eq!(result, expected);
+            }
+        };
+    }
+
+    make_cardinal_neighbor_testcase!(
+        test_cardinal_neighbors_top_left,
+        Position::at(0, 0),
+        to_path![(1, 0), (0, 1)]
+    );
+
+    make_cardinal_neighbor_testcase!(
+        test_cardinal_neighbors_top_center,
+        Position::at(0, 1),
+        to_path![(0, 0), (0, 2), (1, 1)]
+    );
+
+    make_cardinal_neighbor_testcase!(
+        test_cardinal_neighbors_top_right,
+        Position::at(0, 2),
+        to_path![(0, 1), (1, 2)]
+    );
+    make_cardinal_neighbor_testcase!(
+        test_cardinal_neighbors_mid_left,
+        Position::at(1, 0),
+        to_path![(0, 0), (1, 1), (2, 0)]
+    );
+
+    make_cardinal_neighbor_testcase!(
+        test_cardinal_neighbors_mid_center,
+        Position::at(1, 1),
+        to_path![(0, 1), (1, 0), (1, 2), (2, 1)]
+    );
+
+    make_cardinal_neighbor_testcase!(
+        test_cardinal_neighbors_mid_right,
+        Position::at(1, 2),
+        to_path![(0, 2), (1, 1), (2, 2)]
+    );
+
+    make_cardinal_neighbor_testcase!(
+        test_cardinal_neighbors_bot_left,
+        Position::at(2, 0),
+        to_path![(1, 0), (2, 1)]
+    );
+
+    make_cardinal_neighbor_testcase!(
+        test_cardinal_neighbors_bot_center,
+        Position::at(2, 1),
+        to_path![(2, 0), (1, 1), (2, 2)]
+    );
+
+    make_cardinal_neighbor_testcase!(
+        test_cardinal_neighbors_bot_right,
+        Position::at(2, 2),
+        to_path![(1, 2), (2, 1)]
+    );
 }
