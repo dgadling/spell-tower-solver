@@ -830,4 +830,84 @@ mod position_tests {
         Position::at(2, 2),
         to_path![(1, 2), (2, 1)]
     );
+
+    // Make a function that tests the cardinal neighbors of $position are equal
+    // to $expected
+    macro_rules! make_neighbor_testcase {
+        ($test_name:ident, $position:expr, $expected:expr) => {
+            #[test]
+            fn $test_name() {
+                let c = $position;
+
+                let mut expected = $expected;
+                expected.sort();
+
+                let mut result = c.neighbors(2, 2);
+                result.sort();
+                assert_eq!(result, expected);
+            }
+        };
+    }
+
+    make_neighbor_testcase!(
+        test_neighbors_top_left,
+        Position::at(0, 0),
+        to_path![(1, 0), (0, 1), (1, 1)]
+    );
+
+    make_neighbor_testcase!(
+        test_neighbors_top_center,
+        Position::at(0, 1),
+        to_path![(0, 0), (0, 2), (1, 0), (1, 1), (1, 2)]
+    );
+
+    make_neighbor_testcase!(
+        test_neighbors_top_right,
+        Position::at(0, 2),
+        to_path![(0, 1), (1, 1), (1, 2)]
+    );
+    make_neighbor_testcase!(
+        test_neighbors_mid_left,
+        Position::at(1, 0),
+        to_path![(0, 0), (0, 1), (1, 1), (2, 0), (2, 1)]
+    );
+
+    make_neighbor_testcase!(
+        test_neighbors_mid_center,
+        Position::at(1, 1),
+        to_path![
+            (0, 0),
+            (0, 1),
+            (0, 2),
+            (1, 0),
+            (1, 2),
+            (2, 0),
+            (2, 1),
+            (2, 2)
+        ]
+    );
+
+    make_neighbor_testcase!(
+        test_neighbors_mid_right,
+        Position::at(1, 2),
+        to_path![(0, 1), (0, 2), (1, 1), (2, 1), (2, 2)]
+    );
+
+    make_neighbor_testcase!(
+        test_neighbors_bot_left,
+        Position::at(2, 0),
+        to_path![(1, 0), (1, 1), (2, 1)]
+    );
+
+    make_neighbor_testcase!(
+        test_neighbors_bot_center,
+        Position::at(2, 1),
+        to_path![(1, 0), (1, 1), (1, 2), (2, 0), (2, 2)]
+    );
+
+    make_neighbor_testcase!(
+        test_neighbors_bot_right,
+        Position::at(2, 2),
+        to_path![(1, 1), (1, 2), (2, 1)]
+    );
 }
