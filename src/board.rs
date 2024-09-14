@@ -523,8 +523,8 @@ mod board_tests {
 
     #[test]
     /// Here we have a word where there's a line-clearing letter getting
-    /// destructed. Make sure that line-clearing 'j' doesn't cause the 'v' to
-    /// get consumed as well. It shouldn't since it's not carrdinally-adjacent
+    /// destructed. Make sure that line-clearing `j` doesn't cause the `v` to
+    /// get consumed as well. It shouldn't since it's not cardinally-adjacent
     /// to any of the tiles in the word.
     fn bonus_letters_dont_clear() {
         let b = Board::new_from(
@@ -543,6 +543,79 @@ mod board_tests {
             (1, 8)
         ];
         assert_eq!(b.score_for("princess", &path), 392);
+    }
+
+    #[test]
+    /// Test that board "evolution" and "gravity" work as expected. Given an
+    /// input board and some `FoundWord`s to iterate over, make sure we get the
+    /// expected board at the end.
+    fn evolution_test() {
+        let input_board = to_board!(
+            "i.ssbtpod",
+            "mcisneice",
+            "hcrqsovaa",
+            "ln.sgsnnr",
+            "eiusyijme"
+        );
+
+        let output_board: Vec<Vec<String>> = to_board!(
+            "    bt   ",
+            "   snepod",
+            "   qsovaa",
+            "  .sgsnnr",
+            "  usyijme"
+        );
+
+        let word_pickings = vec![
+            FoundWord {
+                score: 1,
+                word: "ice".to_string(),
+                path: to_path![(1, 6), (1, 7), (1, 8)],
+            },
+            FoundWord {
+                score: 1,
+                word: "icicle".to_string(),
+                path: to_path![(0, 0), (1, 1), (1, 2), (2, 1), (3, 0), (4, 0)],
+            },
+        ];
+
+        let mut b = Board::new_from(input_board, vec![], 3);
+
+        for findings in word_pickings {
+            b = b.evolve_via(findings);
+        }
+
+        assert_eq!(b.tiles, output_board);
+    }
+
+    #[test]
+    /// Test that a `Board`s `id` is based solely on the content of the tiles.
+    /// We do this by making two `Board`s that take the same tiles, but the
+    /// other input is different. We then verify that their `id`s are the same
+    /// while they're not pointing at the same object in memory.
+    ///
+    /// Note that if they're given the same parameters the compiler makes sure
+    /// they **do** point at the same object in memory!
+    fn id_test() {
+        let sample_b1 = vec![
+            "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
+            "mcisneice".chars().map(|c| c.to_string()).collect(),
+            "hcrqsovaa".chars().map(|c| c.to_string()).collect(),
+            "ln.sgsnnr".chars().map(|c| c.to_string()).collect(),
+            "eiusyijme".chars().map(|c| c.to_string()).collect(),
+        ];
+        let sample_b2 = vec![
+            "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
+            "mcisneice".chars().map(|c| c.to_string()).collect(),
+            "hcrqsovaa".chars().map(|c| c.to_string()).collect(),
+            "ln.sgsnnr".chars().map(|c| c.to_string()).collect(),
+            "eiusyijme".chars().map(|c| c.to_string()).collect(),
+        ];
+
+        let b1 = Board::new_from(sample_b1, vec![], 3);
+        let b2 = Board::new_from(sample_b2, vec![(0, 0), (1, 1), (2, 2)], 4);
+
+        assert_eq!(b1.id, b2.id);
     }
 }
 
