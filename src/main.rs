@@ -3,7 +3,7 @@ pub mod dictionary;
 mod game;
 pub mod position;
 
-use std::{io::Read, str::FromStr};
+use std::io::Read;
 
 use board::Board;
 use clap::Parser;
@@ -20,10 +20,6 @@ pub struct Args {
     /// Path of the dictionary to use
     #[arg(long, default_value = "nwl/nwl2023.txt")]
     dict_path: String,
-
-    /// Path of the dictionary database file to use
-    #[arg(long, default_value = "dictionary.db")]
-    db_path: String,
 
     /// Starting max number of children each board can spawn. Setting this forces quiet mode!
     #[arg(short = 's', long)]
@@ -57,7 +53,6 @@ pub struct Args {
 #[allow(dead_code)]
 fn size_tests() {
     let args = Args {
-        db_path: String::from_str("dictionary.db").unwrap(),
         start_max_children: None,
         max_children: 0,
         memory_debug: false,
