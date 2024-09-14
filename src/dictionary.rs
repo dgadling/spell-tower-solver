@@ -4,6 +4,7 @@ use rusqlite::Connection;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 
 pub struct Dictionary {
     word_cache: HashSet<String>,
@@ -25,8 +26,16 @@ impl Dictionary {
         if !args.quiet {
             println!("Checking database integrity");
         }
+
+        if !Path::new(&args.db_path).exists() {
+            println!("{} doesn't exist, creating!", &args.db_path);
+            Dictionary::init_db(&args);
+            return;
+        }
+
         let conn = Connection::open(&args.db_path)
             .unwrap_or_else(|e| panic!("Couldn't open {}: {}", args.db_path, e));
+
         let rows_res = conn.query_row("SELECT count(*) FROM words", [], |r| {
             r.get::<usize, usize>(0)
         });
@@ -43,7 +52,9 @@ impl Dictionary {
                     return;
                 }
             }
-            _ => {}
+            Err(e) => {
+                println!("Got an error: {}", e);
+            }
         };
 
         if !args.quiet {
@@ -75,28 +86,24 @@ impl Dictionary {
                 CREATE TABLE words (
                     id INTEGER PRIMARY KEY,
                     word TEXT NOT NULL,
-                    base_points INTEGER,
                     UNIQUE(word)
                 )
                 ",
-            (),
+            [],
         )
         .unwrap_or_else(|e| panic!("Couldn't create base table: {}", e));
 
-        conn.execute("BEGIN TRANSACTION", ())
+        conn.execute("BEGIN TRANSACTION", [])
             .unwrap_or_else(|e| panic!("Couldn't even start a transaction: {}", e));
         in_lines
             .filter(|l| l.len() >= args.min_word_length)
             .for_each(|w| {
-                conn.execute(
-                    "INSERT INTO words (word, base_points) VALUES (?1, ?2)",
-                    (&w, 1),
-                )
-                .unwrap_or_else(|e| panic!("Couldn't insert {} into the database: {}", w, e));
+                conn.execute("INSERT INTO words (word) VALUES (?1)", [&w])
+                    .unwrap_or_else(|e| panic!("Couldn't insert {} into the database: {}", w, e));
                 bar.inc(1)
             });
         bar.finish();
-        conn.execute("COMMIT", ())
+        conn.execute("COMMIT", [])
             .unwrap_or_else(|e| panic!("Couldn't commit the transaction: {}", e));
     }
 
