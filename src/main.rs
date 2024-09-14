@@ -148,7 +148,6 @@ struct InputBoard {
 
 fn main() {
     let mut args = Args::parse();
-    Dictionary::init_from(&args);
 
     let mut input_str = String::new();
     args.input_f
