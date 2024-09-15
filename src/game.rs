@@ -3,11 +3,19 @@ use crate::dictionary::Dictionary;
 use crate::Args;
 
 use deepsize::DeepSizeOf;
-use indicatif::{HumanBytes, HumanCount, ProgressBar, ProgressStyle};
+use indicatif::{HumanBytes, HumanCount, HumanDuration, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
-pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, usize)>) {
+#[cfg(target_os = "windows")]
+use mimalloc::MiMalloc;
+
+#[cfg(target_os = "windows")]
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
+pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, usize)>, game_start_time: Instant) {
     let mut all_boards = HashMap::new();
     let mut terminal_boards = HashSet::new();
     let mut to_process = Vec::new();
@@ -24,7 +32,7 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
     .progress_chars("-> ");
 
     let dict = Dictionary::new(&args);
-    let mut generation = 1;
+    let mut generation = 1_u32;
     while !to_process.is_empty() {
         let to_process_len = to_process.len() as u64;
         let bar: ProgressBar;
@@ -34,9 +42,10 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
             print!("Generation {: >2}", generation);
             if args.memory_debug {
                 print!(
-                    ": {} boards to process ({}) ; {} boards total ({})",
+                    ": {} boards to process ({}) ; {} terminal boards ; {} boards total ({})",
                     HumanCount(to_process.len() as u64),
                     HumanBytes(to_process.deep_size_of() as u64),
+                    HumanCount(terminal_boards.len() as u64),
                     HumanCount(all_boards.len() as u64),
                     HumanBytes(all_boards.deep_size_of() as u64)
                 );
@@ -196,8 +205,19 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
             println!();
         }
         generation += 1;
+        if generation > args.max_generations {
+            break;
+        }
 
         to_process = Vec::from_iter(new_to_process.into_iter());
+        to_process.sort_by(|a, b| {
+            all_boards
+                .get(b)
+                .unwrap()
+                .get_score()
+                .cmp(&all_boards.get(a).unwrap().get_score())
+        });
+        to_process.truncate(args.max_gen_size);
     }
 
     let term_count = terminal_boards.len();
@@ -251,5 +271,8 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
                 .map(|pos| format!("{}", pos))
                 .collect::<Vec<String>>()
         )
+    }
+    if !args.quiet {
+        println!("Finished playing in {}", HumanDuration(game_start_time.elapsed()));
     }
 }

@@ -26,33 +26,42 @@ impl Position {
     }
 
     pub fn neighbors(&self, width: usize, height: usize) -> Vec<Position> {
-        let mut all_neighbors = self.cardinal_neighbors(width, height);
+        let mut neighbors = self.cardinal_neighbors(width, height);
+        neighbors.reserve(4);
 
-        all_neighbors.extend(
-            vec![
-                self.north_west(width, height),
-                self.north_east(width, height),
-                self.south_west(width, height),
-                self.south_east(width, height),
-            ]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<Position>>(),
-        );
+        if let Some(p) = self.north_west(width, height) {
+            neighbors.push(p);
+        }
+        if let Some(p) = self.north_east(width, height) {
+            neighbors.push(p);
+        }
+        if let Some(p) = self.south_west(width, height) {
+            neighbors.push(p);
+        }
+        if let Some(p) = self.south_east(width, height) {
+            neighbors.push(p);
+        }
 
-        all_neighbors
+        neighbors
     }
 
     pub fn cardinal_neighbors(&self, width: usize, height: usize) -> Vec<Position> {
-        vec![
-            self.north(width, height),
-            self.east(width, height),
-            self.west(width, height),
-            self.south(width, height),
-        ]
-        .into_iter()
-        .flatten()
-        .collect()
+        let mut neighbors: Vec<Position> = Vec::with_capacity(4);
+
+        if let Some(p) = self.north(width, height) {
+            neighbors.push(p);
+        }
+        if let Some(p) = self.east(width, height) {
+            neighbors.push(p);
+        }
+        if let Some(p) = self.west(width, height) {
+            neighbors.push(p);
+        }
+        if let Some(p) = self.south(width, height) {
+            neighbors.push(p);
+        }
+
+        neighbors
     }
 
     pub fn north_west(&self, _width: usize, _height: usize) -> Option<Position> {

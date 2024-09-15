@@ -1,6 +1,5 @@
 use crate::position::Position;
 
-use phf::{phf_map, phf_set};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::hash::Hasher;
@@ -10,38 +9,34 @@ use crate::dictionary::Dictionary;
 
 use deepsize::DeepSizeOf;
 
-// Taken from https://en.wikipedia.org/wiki/Scrabble_letter_distributions but
-// this is clearly not what's used in SpellTower.
-static LETTER_SCORES: phf::Map<char, u32> = phf_map! {
-    'a' => 1,
-    'b' => 4,
-    'c' => 4,
-    'd' => 3,
-    'e' => 1,
-    'f' => 5,
-    'g' => 3,
-    'h' => 5,
-    'i' => 1,
-    'j' => 9,
-    'k' => 6,
-    'l' => 2,
-    'm' => 4,
-    'n' => 2,
-    'o' => 1,
-    'p' => 4,
-    'q' => 12,
-    'r' => 2,
-    's' => 1,
-    't' => 2,
-    'u' => 1,
-    'v' => 5,
-    'w' => 5,
-    'x' => 9,
-    'y' => 5,
-    'z' => 11,
-};
-
-static CLEARS_ROW: phf::Set<char> = phf_set!('j', 'q', 'x', 'z');
+const LETTER_SCORES: &'static [u32] = &[
+    1,  // a
+    4,  // b
+    4,  // c
+    3,  // d
+    1,  // e
+    5,  // f
+    3,  // g
+    5,  // h
+    1,  // i
+    9,  // j
+    6,  // k
+    2,  // l
+    4,  // m
+    2,  // n
+    1,  // o
+    4,  // p
+    12, // q
+    2,  // r
+    1,  // s
+    2,  // t
+    1,  // u
+    5,  // v
+    5,  // w
+    9,  // x
+    5,  // y
+    11, // z
+];
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, DeepSizeOf)]
 pub struct FoundWord {
@@ -57,7 +52,6 @@ pub struct Board {
     height: usize,
     min_word_length: usize,
     tiles: Vec<Vec<String>>,
-    usable_tiles: usize,
     multipliers: Vec<Position>,
     cumulative_score: u32,
     searched: bool,
@@ -111,21 +105,12 @@ impl fmt::Display for Position {
 }
 
 impl Board {
+    const MIN_WORD_LEN: usize = 3;
+
     fn _hash_for(tiles: &Vec<Vec<String>>) -> u64 {
         let mut hasher = DefaultHasher::new();
         tiles.hash(&mut hasher);
         hasher.finish()
-    }
-
-    fn get_usable_tiles(tiles: &Vec<Vec<String>>) -> usize {
-        tiles
-            .iter()
-            .map(|r| {
-                r.iter()
-                    .filter(|c| *c != Board::BLOCK && *c != Board::EMPTY)
-                    .count()
-            })
-            .sum::<usize>()
     }
 
     pub fn new_from(
@@ -141,7 +126,6 @@ impl Board {
             width,
             height,
             min_word_length,
-            usable_tiles: Self::get_usable_tiles(&tiles),
             tiles,
             multipliers: multipliers
                 .iter()
@@ -170,10 +154,6 @@ impl Board {
 
     pub fn searched(&self) -> bool {
         self.searched
-    }
-
-    pub fn usable_tiles(&self) -> usize {
-        self.usable_tiles
     }
 
     pub fn words(&self) -> &Vec<FoundWord> {
@@ -223,13 +203,14 @@ impl Board {
     }
 
     fn find_path_of_destruction(&self, path: &Vec<Position>, word: &str) -> Vec<Position> {
-        let mut path_of_destruction: HashSet<Position> = HashSet::from_iter(path.clone());
+        let mut path_of_destruction = Vec::with_capacity(word.len() * 3);
+        path_of_destruction.extend(path.clone());
 
         // See if we're *directly* going over any of the row-clearing letters
         path_of_destruction.extend(
             word.char_indices()
                 .filter_map(|(idx, c)| {
-                    if !CLEARS_ROW.contains(&c) {
+                    if c != 'j' && c != 'q' && c != 'x' && c != 'z' {
                         return None;
                     }
 
@@ -239,8 +220,7 @@ impl Board {
                         col: c as u8,
                     }))
                 })
-                .flatten()
-                .collect::<Vec<Position>>(),
+                .flatten(),
         );
 
         // Any blocks get destroyed if any block adjacent to them is destroyed
@@ -251,20 +231,20 @@ impl Board {
                         .into_iter()
                         .filter(|p| self.get(p) == Board::BLOCK)
                 })
-                .flatten()
-                .collect::<Vec<Position>>(),
+                .flatten(),
         );
 
         if path.len() >= 5 {
             path_of_destruction.extend(
                 path.iter()
                     .map(|p| p.cardinal_neighbors(self.width, self.height))
-                    .flatten()
-                    .collect::<Vec<Position>>(),
+                    .flatten(),
             );
         }
 
-        path_of_destruction.into_iter().collect()
+        HashSet::<Position>::from_iter(path_of_destruction.into_iter())
+            .drain()
+            .collect()
     }
 
     fn destroy_board(&self, path_of_destruction: &Vec<Position>) -> Vec<Vec<String>> {
@@ -321,7 +301,6 @@ impl Board {
             width: self.width,
             height: self.height,
             min_word_length: self.min_word_length,
-            usable_tiles: Self::get_usable_tiles(&new_tiles),
             tiles: new_tiles,
             multipliers: new_mults,
             cumulative_score: self.cumulative_score + found_word.score,
@@ -361,20 +340,20 @@ impl Board {
     }
 
     fn finds_words_in_starting_from(&self, dict: &Dictionary, start: Position) -> Vec<FoundWord> {
-        let mut path = Vec::new();
+        let mut path = Vec::with_capacity(16);
         path.push(start.clone());
 
         let path_str = self.get(&Position {
             row: start.row,
             col: start.col,
         });
-        self._find_word(&start, &mut path, &path_str, dict)
+        self._find_word(&start, &path, &path_str, dict)
     }
 
     fn _find_word(
         &self,
         pos: &Position,
-        path: &mut Vec<Position>,
+        path: &Vec<Position>,
         path_str: &String,
         dict: &Dictionary,
     ) -> Vec<FoundWord> {
@@ -388,7 +367,7 @@ impl Board {
         */
         let mut found_words: Vec<FoundWord> = Vec::new();
 
-        if path_str.len() >= 3 && dict.is_word(&path_str) {
+        if path_str.len() >= Board::MIN_WORD_LEN && dict.is_word(&path_str) {
             found_words.push(FoundWord {
                 path: path.clone(),
                 word: path_str.clone(),
@@ -420,13 +399,14 @@ impl Board {
                 next_path.clone_from(path);
                 next_path.push(p.clone());
 
-                let found = self._find_word(&p, &mut next_path, &fragment, dict);
+                let found = self._find_word(&p, &next_path, &fragment, dict);
                 if !found.is_empty() {
                     found_words.extend(found);
                 }
             }
         }
 
+        found_words.shrink_to_fit();
         found_words
     }
 
@@ -436,10 +416,12 @@ impl Board {
             .find_path_of_destruction(path, word)
             .iter()
             .map(|p| {
-                LETTER_SCORES
-                    .get(&self.get(p).chars().next().unwrap())
-                    .cloned()
-                    .unwrap_or_default()
+                let our_letter = self.get(p).chars().next().unwrap();
+                if our_letter == '.' || our_letter == ' ' {
+                    return 0;
+                }
+                let our_letter_num = our_letter as usize;
+                LETTER_SCORES[our_letter_num - 97]
             })
             .sum::<u32>();
 

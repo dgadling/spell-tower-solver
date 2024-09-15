@@ -37,7 +37,7 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     memory_debug: bool,
 
-    /// Evolution batch size
+    /// When evolving, how many boards to do in parallel
     #[arg(long, default_value_t = 100)]
     evolution_batch_size: usize,
 
@@ -48,6 +48,14 @@ pub struct Args {
     /// Input board
     #[clap(value_parser, default_value = "-")]
     input_f: Input,
+
+    /// Max number of boards to process in any given generation
+    #[arg(short = 'g', long, default_value_t = 1_000_000)]
+    max_gen_size: usize,
+
+    /// Max number of generations. When we hit this generation we'll just stop.
+    #[arg(long, default_value_t = u32::MAX)]
+    max_generations: u32,
 }
 
 #[allow(dead_code)]
@@ -61,6 +69,8 @@ fn size_tests() {
         quiet: false,
         dict_path: "dictionary.db".to_string(),
         input_f: Input::new("-").unwrap(),
+        max_gen_size: 1_000_000,
+        max_generations: 100,
     };
 
     let boards = vec![
@@ -104,7 +114,6 @@ fn size_tests() {
         println!("Board\n----------------------------------------");
         println!("  input board = {} bytes", &board.deep_size_of());
         let mut b = Board::new_from(board, mult_locs.clone(), 3);
-        println!(" usable tiles = {}", b.usable_tiles());
         println!("board pre-pop = {} bytes", b.deep_size_of());
         let words = b.find_words(&dict, 10_000);
         println!(
@@ -167,10 +176,10 @@ fn main() {
     if let Some(start) = args.start_max_children {
         for child_count in start..=args.max_children {
             args.max_children = child_count;
-            game::play_game(&args, tiles.clone(), input_board.mults.clone())
+            game::play_game(&args, tiles.clone(), input_board.mults.clone(), game_run_time)
         }
     } else {
-        game::play_game(&args, tiles, input_board.mults.clone())
+        game::play_game(&args, tiles, input_board.mults.clone(), game_run_time)
     }
 
     if !args.quiet {
