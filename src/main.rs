@@ -176,7 +176,12 @@ fn main() {
     if let Some(start) = args.start_max_children {
         for child_count in start..=args.max_children {
             args.max_children = child_count;
-            game::play_game(&args, tiles.clone(), input_board.mults.clone(), game_run_time)
+            game::play_game(
+                &args,
+                tiles.clone(),
+                input_board.mults.clone(),
+                game_run_time,
+            )
         }
     } else {
         game::play_game(&args, tiles, input_board.mults.clone(), game_run_time)

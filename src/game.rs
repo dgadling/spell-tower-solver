@@ -15,7 +15,12 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, usize)>, game_start_time: Instant) {
+pub fn play_game(
+    args: &Args,
+    board: Vec<Vec<String>>,
+    mult_locs: Vec<(usize, usize)>,
+    game_start_time: Instant,
+) {
     let mut all_boards = HashMap::new();
     let mut terminal_boards = HashSet::new();
     let mut to_process = Vec::new();
@@ -291,6 +296,9 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
         )
     }
     if !args.quiet {
-        println!("Finished playing in {}", HumanDuration(game_start_time.elapsed()));
+        println!(
+            "Finished playing in {}",
+            HumanDuration(game_start_time.elapsed())
+        );
     }
 }
