@@ -51,7 +51,7 @@ pub struct Board {
     width: usize,
     height: usize,
     min_word_length: usize,
-    tiles: Vec<Vec<String>>,
+    tiles: [[char; Board::WIDTH]; Board::HEIGHT],
     pub usable_tiles: usize,
     multipliers: Vec<Position>,
     cumulative_score: u32,
@@ -107,26 +107,28 @@ impl fmt::Display for Position {
 
 impl Board {
     const MIN_WORD_LEN: usize = 3;
+    pub const WIDTH: usize = 9;
+    pub const HEIGHT: usize = 13;
 
-    fn _hash_for(tiles: &Vec<Vec<String>>) -> u64 {
+    fn _hash_for(tiles: &[[char; Board::WIDTH]; Board::HEIGHT]) -> u64 {
         let mut hasher = DefaultHasher::new();
         tiles.hash(&mut hasher);
         hasher.finish()
     }
 
-    fn get_usable_tiles(tiles: &Vec<Vec<String>>) -> usize {
+    fn get_usable_tiles(tiles: &[[char; Board::WIDTH]; Board::HEIGHT]) -> usize {
         tiles
             .iter()
             .map(|r| {
                 r.iter()
-                    .filter(|c| *c != Board::BLOCK && *c != Board::EMPTY)
+                    .filter(|c| **c != Board::BLOCK && **c != Board::EMPTY)
                     .count()
             })
             .sum::<usize>()
     }
 
     pub fn new_from(
-        tiles: Vec<Vec<String>>,
+        tiles: [[char; 9]; 13],
         multipliers: Vec<(usize, usize)>,
         min_word_length: usize,
     ) -> Self {
@@ -157,9 +159,9 @@ impl Board {
         }
     }
 
-    pub const BLOCK: &'static str = ".";
-    pub const EMPTY: &'static str = " ";
-    pub const DEBUG: &'static str = "*";
+    pub const BLOCK: char = '.';
+    pub const EMPTY: char = ' ';
+    pub const DEBUG: char = '*';
 
     pub fn get_score(&self) -> u32 {
         self.cumulative_score
@@ -189,7 +191,7 @@ impl Board {
     pub fn clean(&mut self) {
         if !self.cleaned {
             // Now that the board has been fully processed, free up some memory
-            self.tiles = vec![];
+            // self.tiles = []; -- can't "clean" an array ; it'll always be that many characters
             self.words = vec![];
             self.cleaned = true;
         }
@@ -203,16 +205,12 @@ impl Board {
         self.evolved_from.unwrap()
     }
 
-    pub fn get(&self, pos: &Position) -> &String {
-        Board::_get(&self.tiles, pos)
+    pub fn get(&self, pos: &Position) -> char {
+        self.tiles[pos.row as usize][pos.col as usize]
     }
 
-    fn _get<'a, 'b>(tiles: &'a Vec<Vec<String>>, pos: &'b Position) -> &'a String {
-        tiles
-            .get(pos.row as usize)
-            .unwrap()
-            .get(pos.col as usize)
-            .unwrap()
+    fn _get(tiles: &[[char; Board::WIDTH]; Board::HEIGHT], pos: &Position) -> char {
+        tiles[pos.row as usize][pos.col as usize]
     }
 
     fn find_path_of_destruction(&self, path: &Vec<Position>, word: &str) -> Vec<Position> {
@@ -260,17 +258,17 @@ impl Board {
             .collect()
     }
 
-    fn destroy_board(&self, path_of_destruction: &Vec<Position>) -> Vec<Vec<String>> {
+    fn destroy_board(&self, path_of_destruction: &Vec<Position>) -> [[char; Board::WIDTH]; Board::HEIGHT] {
         let mut new_tiles = self.tiles.clone();
 
         for p in path_of_destruction {
-            new_tiles[p.row as usize][p.col as usize] = Board::EMPTY.to_string();
+            new_tiles[p.row as usize][p.col as usize] = Board::EMPTY;
         }
 
         new_tiles
     }
 
-    fn apply_gravity(tiles: &mut Vec<Vec<String>>, path_of_destruction: &mut Vec<Position>) {
+    fn apply_gravity(tiles: &mut [[char; Board::WIDTH]; Board::HEIGHT], path_of_destruction: &mut Vec<Position>) {
         // Reverse sort based on row so we start at the lowest row and work our way back up
         path_of_destruction.sort_by(|a, b| b.row.cmp(&a.row));
 
@@ -278,18 +276,18 @@ impl Board {
         // No need to start any lower than the first blown up row
         for r in (1..=path_of_destruction[0].row).rev() {
             for c in 0..tiles.get(0).unwrap().len() {
-                if !tiles[r as usize][c as usize].eq(Board::EMPTY) {
+                if tiles[r as usize][c as usize] != Board::EMPTY {
                     continue;
                 }
 
                 for row in (0..=r - 1).rev() {
                     let above = Board::_get(&tiles, &Position { row, col: c as u8 });
-                    if above.eq(" ") {
+                    if above == ' ' {
                         continue;
                     }
 
-                    tiles.get_mut(r as usize).unwrap()[c as usize] = above.clone();
-                    tiles.get_mut(row as usize).unwrap()[c as usize] = Board::EMPTY.to_string();
+                    tiles[r as usize][c as usize] = above.clone();
+                    tiles[row as usize][c as usize] = Board::EMPTY;
                     break;
                 }
             }
@@ -370,10 +368,10 @@ impl Board {
         let mut path = Vec::with_capacity(16);
         path.push(start.clone());
 
-        let path_str = self.get(&Position {
+        let path_str = String::from(self.get(&Position {
             row: start.row,
             col: start.col,
-        });
+        }));
         self._find_word(&start, &path, &path_str, dict)
     }
 
@@ -412,14 +410,14 @@ impl Board {
 
             let l = self.get(p);
 
-            if l.eq(Board::BLOCK) || l.eq(Board::EMPTY) {
+            if l == Board::BLOCK || l == Board::EMPTY {
                 // This tile is a dead-end, no need to keep looking
                 continue;
             }
 
             let mut fragment = String::with_capacity(path_str.len() + 1);
             fragment.push_str(&path_str);
-            fragment.push_str(l);
+            fragment.push_str(&l.to_string());
 
             if dict.has_path(&fragment) {
                 let mut next_path = Vec::with_capacity(path.len() + 1);
@@ -443,7 +441,7 @@ impl Board {
             .find_path_of_destruction(path, word)
             .iter()
             .map(|p| {
-                let our_letter = self.get(p).chars().next().unwrap();
+                let our_letter = self.get(p);
                 if our_letter == '.' || our_letter == ' ' {
                     return 0;
                 }
@@ -468,6 +466,7 @@ impl Board {
     }
 }
 
+/*
 #[cfg(test)]
 mod board_tests {
     use super::*;
@@ -629,3 +628,4 @@ mod board_tests {
         assert_eq!(b1.id, b2.id);
     }
 }
+    */

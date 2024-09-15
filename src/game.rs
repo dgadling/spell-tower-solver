@@ -17,7 +17,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 pub fn play_game(
     args: &Args,
-    board: Vec<Vec<String>>,
+    board: [[char; Board::WIDTH]; Board::HEIGHT],
     mult_locs: Vec<(usize, usize)>,
     game_start_time: Instant,
 ) {

@@ -64,35 +64,35 @@ pub struct Args {
 
 fn size_test(args: Args) {
     let boards = vec![
-        vec![
-            "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
-            "mcisneice".chars().map(|c| c.to_string()).collect(),
-            "hcrqsovaa".chars().map(|c| c.to_string()).collect(),
-            "ln.sgsnnr".chars().map(|c| c.to_string()).collect(),
-            "eiusyijme".chars().map(|c| c.to_string()).collect(),
-            "olmgapelf".chars().map(|c| c.to_string()).collect(),
-            "tsaeeudhn".chars().map(|c| c.to_string()).collect(),
-            "bsoenditr".chars().map(|c| c.to_string()).collect(),
-            "cwoopteaf".chars().map(|c| c.to_string()).collect(),
-            "itzoutner".chars().map(|c| c.to_string()).collect(),
-            ".upriigal".chars().map(|c| c.to_string()).collect(),
-            "tkayee.ld".chars().map(|c| c.to_string()).collect(),
-            "xlihcrras".chars().map(|c| c.to_string()).collect(),
+        [
+            "i.ssbtpod".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "mcisneice".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "hcrqsovaa".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "ln.sgsnnr".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "eiusyijme".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "olmgapelf".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "tsaeeudhn".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "bsoenditr".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "cwoopteaf".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "itzoutner".chars().collect::<Vec<char>>().try_into().unwrap(),
+            ".upriigal".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "tkayee.ld".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "xlihcrras".chars().collect::<Vec<char>>().try_into().unwrap(),
         ],
-        vec![
-            "         ".chars().map(|c| c.to_string()).collect(),
-            "         ".chars().map(|c| c.to_string()).collect(),
-            "         ".chars().map(|c| c.to_string()).collect(),
-            "         ".chars().map(|c| c.to_string()).collect(),
-            "eiusy    ".chars().map(|c| c.to_string()).collect(),
-            "o.mga    ".chars().map(|c| c.to_string()).collect(),
-            "ts.ee    ".chars().map(|c| c.to_string()).collect(),
-            "bsoen    ".chars().map(|c| c.to_string()).collect(),
-            "cwoop    ".chars().map(|c| c.to_string()).collect(),
-            "itzoutn  ".chars().map(|c| c.to_string()).collect(),
-            ".upriig  ".chars().map(|c| c.to_string()).collect(),
-            "tkayee.l ".chars().map(|c| c.to_string()).collect(),
-            "xlihcrra ".chars().map(|c| c.to_string()).collect(),
+        [
+            "         ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "         ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "         ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "         ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "eiusy    ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "o.mga    ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "ts.ee    ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "bsoen    ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "cwoop    ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "itzoutn  ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            ".upriig  ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "tkayee.l ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "xlihcrra ".chars().collect::<Vec<char>>().try_into().unwrap(),
         ],
     ];
 
@@ -104,6 +104,7 @@ fn size_test(args: Args) {
         println!("\nBoard\n----------------------------------------");
         println!("    input board = {} bytes", &board.deep_size_of());
         let mut b = Board::new_from(board, mult_locs.clone(), 3);
+        println!("             id = {}", b.id);
         println!("  board pre-pop = {} bytes", b.deep_size_of());
         let words = b.find_words(&dict, 100_000);
         println!(
@@ -137,7 +138,7 @@ fn size_test(args: Args) {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct InputBoard {
-    board: Vec<String>,
+    board: [[char; Board::WIDTH]; Board::HEIGHT],
     mults: Vec<(usize, usize)>,
 }
 
@@ -161,11 +162,13 @@ fn main() {
         )
     });
 
+    /*
     let tiles = input_board
         .board
         .iter()
         .map(|r| r.chars().map(|c| c.to_string()).collect::<Vec<String>>())
         .collect::<Vec<Vec<String>>>();
+    */
 
     let game_run_time = std::time::Instant::now();
     if let Some(start) = args.start_max_children {
@@ -173,13 +176,13 @@ fn main() {
             args.max_children = child_count;
             game::play_game(
                 &args,
-                tiles.clone(),
+                input_board.board,
                 input_board.mults.clone(),
                 game_run_time,
             )
         }
     } else {
-        game::play_game(&args, tiles, input_board.mults.clone(), game_run_time)
+        game::play_game(&args, input_board.board, input_board.mults.clone(), game_run_time)
     }
 
     if !args.quiet {
