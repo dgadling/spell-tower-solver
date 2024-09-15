@@ -56,23 +56,13 @@ pub struct Args {
     /// Max number of generations. When we hit this generation we'll just stop.
     #[arg(long, default_value_t = u32::MAX)]
     max_generations: u32,
+
+    /// Don't actually run anything, just do a size test
+    #[arg(long, default_value_t = false)]
+    size_test: bool,
 }
 
-#[allow(dead_code)]
-fn size_tests() {
-    let args = Args {
-        start_max_children: None,
-        max_children: 0,
-        memory_debug: false,
-        min_word_length: 3,
-        evolution_batch_size: 0,
-        quiet: false,
-        dict_path: "dictionary.db".to_string(),
-        input_f: Input::new("-").unwrap(),
-        max_gen_size: 1_000_000,
-        max_generations: 100,
-    };
-
+fn size_test(args: Args) {
     let boards = vec![
         vec![
             "i.ssbtpod".chars().map(|c| c.to_string()).collect(),
@@ -111,37 +101,37 @@ fn size_tests() {
     let dict = Dictionary::new(&args);
 
     for board in boards {
-        println!("Board\n----------------------------------------");
-        println!("  input board = {} bytes", &board.deep_size_of());
+        println!("\nBoard\n----------------------------------------");
+        println!("    input board = {} bytes", &board.deep_size_of());
         let mut b = Board::new_from(board, mult_locs.clone(), 3);
-        println!("board pre-pop = {} bytes", b.deep_size_of());
-        let words = b.find_words(&dict, 10_000);
+        println!("  board pre-pop = {} bytes", b.deep_size_of());
+        let words = b.find_words(&dict, 100_000);
         println!(
-            "        words = {} bytes / {} words",
+            "          words = {} bytes / {} words",
             words.deep_size_of(),
             words.len()
         );
         let words_word_sizes = words.iter().map(|w| w.word.deep_size_of()).sum::<usize>();
         let words_path_sizes = words.iter().map(|w| w.path.deep_size_of()).sum::<usize>();
         let total_positions = words.iter().map(|w| w.path.len()).sum::<usize>();
-        println!("words word = {} bytes", words_word_sizes);
-        println!("words path = {} bytes", words_path_sizes);
-        println!("words paths total positions = {}", total_positions);
+        println!("     words word = {} bytes", words_word_sizes);
+        println!("     words path = {} bytes", words_path_sizes);
+        println!("words paths num = {}", total_positions);
 
         let w1 = words[0].clone();
-        println!(" w1 overall = {}", w1.deep_size_of());
+        println!("     w1 overall = {}", w1.deep_size_of());
         println!(
-            "    w1.path = {} / {} path items",
+            "        w1.path = {} / {} path items",
             w1.path.deep_size_of(),
             w1.path.len()
         );
-        println!("    w1.word = {}", w1.word.deep_size_of());
-        println!("   w1.score = {}", w1.score.deep_size_of());
+        println!("        w1.word = {}", w1.word.deep_size_of());
+        println!("       w1.score = {}", w1.score.deep_size_of());
 
         b.set_words(words);
-        println!("board ful-pop = {} bytes", b.deep_size_of());
+        println!("  board ful-pop = {} bytes", b.deep_size_of());
         b.clean();
-        println!("board cleaned = {} bytes", b.deep_size_of());
+        println!("  board cleaned = {} bytes", b.deep_size_of());
     }
 }
 
@@ -153,6 +143,11 @@ struct InputBoard {
 
 fn main() {
     let mut args = Args::parse();
+
+    if args.size_test {
+        size_test(args);
+        return;
+    }
 
     let mut input_str = String::new();
     args.input_f
