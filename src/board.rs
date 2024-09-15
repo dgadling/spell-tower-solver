@@ -52,6 +52,7 @@ pub struct Board {
     height: usize,
     min_word_length: usize,
     tiles: Vec<Vec<String>>,
+    pub usable_tiles: usize,
     multipliers: Vec<Position>,
     cumulative_score: u32,
     searched: bool,
@@ -113,6 +114,17 @@ impl Board {
         hasher.finish()
     }
 
+    fn get_usable_tiles(tiles: &Vec<Vec<String>>) -> usize {
+        tiles
+            .iter()
+            .map(|r| {
+                r.iter()
+                    .filter(|c| *c != Board::BLOCK && *c != Board::EMPTY)
+                    .count()
+            })
+            .sum::<usize>()
+    }
+
     pub fn new_from(
         tiles: Vec<Vec<String>>,
         multipliers: Vec<(usize, usize)>,
@@ -126,6 +138,7 @@ impl Board {
             width,
             height,
             min_word_length,
+            usable_tiles: Self::get_usable_tiles(&tiles),
             tiles,
             multipliers: multipliers
                 .iter()
@@ -301,6 +314,7 @@ impl Board {
             width: self.width,
             height: self.height,
             min_word_length: self.min_word_length,
+            usable_tiles: Self::get_usable_tiles(&new_tiles),
             tiles: new_tiles,
             multipliers: new_mults,
             cumulative_score: self.cumulative_score + found_word.score,
@@ -332,11 +346,24 @@ impl Board {
             }
         }
 
-        found_words.sort_by(|a, b| b.score.cmp(&a.score));
+        if found_words.len() > top_n {
+            /*
+            Since we have too many, we need to pick some. Sort & truncate.
+            Sorting order is:
+              - score ; highest wins
+              - word length ; shortest wins
+              - word alphabetically ; can't have a tie, no dupe words
+            */
+            found_words.sort_by(|a, b| {
+                a.score
+                    .cmp(&b.score)
+                    .reverse()
+                    .then(a.word.len().cmp(&b.word.len()).then(a.word.cmp(&b.word)))
+            });
+
+            found_words.truncate(top_n);
+        }
         found_words
-            .into_iter()
-            .take(top_n)
-            .collect::<Vec<FoundWord>>()
     }
 
     fn finds_words_in_starting_from(&self, dict: &Dictionary, start: Position) -> Vec<FoundWord> {

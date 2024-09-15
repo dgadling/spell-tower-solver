@@ -210,14 +210,32 @@ pub fn play_game(args: &Args, board: Vec<Vec<String>>, mult_locs: Vec<(usize, us
         }
 
         to_process = Vec::from_iter(new_to_process.into_iter());
-        to_process.sort_by(|a, b| {
-            all_boards
-                .get(b)
-                .unwrap()
-                .get_score()
-                .cmp(&all_boards.get(a).unwrap().get_score())
-        });
-        to_process.truncate(args.max_gen_size);
+
+        if to_process.len() > args.max_gen_size {
+            /*
+            Since we have too many, we need to pick some. Do that by sorting and truncating.
+            Sorting order is:
+              - cumulative board score ; highest wins
+              - usable tiles remaining ; highest wins
+              - board id ; lowest wins
+            */
+            to_process.sort_by(|a, b| {
+                let board_a = all_boards.get(a).unwrap();
+                let board_b = all_boards.get(b).unwrap();
+                board_a
+                    .get_score()
+                    .cmp(&board_b.get_score())
+                    .reverse()
+                    .then(
+                        board_a
+                            .usable_tiles
+                            .cmp(&board_b.usable_tiles)
+                            .reverse()
+                            .then(a.cmp(&b)),
+                    )
+            });
+            to_process.truncate(args.max_gen_size);
+        }
     }
 
     let term_count = terminal_boards.len();
