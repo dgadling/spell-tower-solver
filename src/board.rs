@@ -84,94 +84,104 @@ The remaining fields are identical for all boards that would be compared to each
 
 impl PartialOrd for Board {
     #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match PartialOrd::partial_cmp(&other.cumulative_score, &self.cumulative_score) {
-            Some(Ordering::Equal) => match PartialOrd::partial_cmp(&other.usable_tiles, &self.usable_tiles) {
-                    Some(Ordering::Equal) => match PartialOrd::partial_cmp(&other.multipliers.len(), &self.multipliers.len()) {
-                        Some(Ordering::Equal) =>  match PartialOrd::partial_cmp(&self.words.len(), &other.words.len()) {
-                                Some(Ordering::Equal) => match PartialOrd::partial_cmp(&other.evolved_via.as_ref().unwrap().word.len(), &self.evolved_via.as_ref().unwrap().word.len()) {
-                                    Some(Ordering::Equal) =>  match PartialOrd::partial_cmp(&self.id, &other.id) {
-                                            Some(Ordering::Equal) => match PartialOrd::partial_cmp(&self.tiles, &other.tiles) {
-                                                    Some(Ordering::Equal) =>  match PartialOrd::partial_cmp(&self.width, &other.width) {
-                                                             Some(Ordering::Equal) => match PartialOrd::partial_cmp(&self.height, &other.height) {
-                                                                    Some(Ordering::Equal) => PartialOrd::partial_cmp(&self.min_word_length, &other.min_word_length),
+    fn partial_cmp(&self, other: &Board) -> ::core::option::Option<::core::cmp::Ordering> {
+        match ::core::cmp::PartialOrd::partial_cmp(&other.cumulative_score, &self.cumulative_score) {
+            ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&other.usable_tiles, &self.usable_tiles) {
+                ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&other.multipliers.len(), &self.multipliers.len()) {
+                    ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&self.words.len(), &other.words.len()) {
+                        ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&other.evolved_via.as_ref().unwrap().word.len(), &self.evolved_via.as_ref().unwrap().word.len()) {
+                            ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&self.evolved_from, &other.evolved_from) {
+                                ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&self.id, &other.id) {
+                                    ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&self.tiles, &other.tiles) {
+                                        ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&self.width, &other.width) {
+                                            ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&self.height, &other.height) {
+                                                ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&self.min_word_length, &other.min_word_length) {
+                                                                    ::core::option::Option::Some(::core::cmp::Ordering::Equal) => match ::core::cmp::PartialOrd::partial_cmp(&self.searched, &other.searched) {
+                                                                                                    ::core::option::Option::Some(::core::cmp::Ordering::Equal) => ::core::cmp::PartialOrd::partial_cmp(&self.cleaned, &other.cleaned),
+                                                                                                    cmp => cmp,
+                                                                                                },
+                                                                                            cmp => cmp,
+                                                                                        },
+                                                                                    cmp => cmp,
+                                                                                },
+                                                                            cmp => cmp,
+                                                                        },
                                                                     cmp => cmp,
-                                                             },
-                                                             cmp =>cmp,
+                                                                },
+                                                            cmp => cmp,
                                                         },
-                                                        cmp => cmp,
-                                                        },
-                                                        cmp => cmp,
-                                                    },
                                                     cmp => cmp,
                                                 },
-                                                cmp => cmp,
-                                            },
                                             cmp => cmp,
                                         },
-                                        cmp => cmp,
-                                    },
                                     cmp => cmp,
                                 },
-                                cmp => cmp,
-                            }
-
+                            cmp => cmp,
+                        },
+                    cmp => cmp,
+                },
+            cmp => cmp,
+        }
     }
 }
+
+/*
+Sort a Board by:
+- cumulative score, higher wins
+- usable tiles left, higher wins
+- multipliers left, higher wins,
+- words used, LOWER wins,
+- evolved_via.word, LONGER wins
+- evolved_from ; this is essentially a random number, but based on parents tiles so _could_ be the same
+- id ; this is essentially random but based on tiles so _could_ be the same
+- tiles ; idk how to compare these, so default sort
+
+The remaining fields are identical for all boards that would be compared to each other:
+- width
+- height
+- min_word_length
+- searched
+- cleaned
+ */
 
 impl Ord for Board {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
-        match Ord::cmp(&other.cumulative_score, &self.cumulative_score) {
-            Ordering::Equal => match Ord::cmp(&other.usable_tiles, &self.usable_tiles) {
-                Ordering::Equal => {
-                    match Ord::cmp(&other.multipliers.len(), &self.multipliers.len()) {
-                        Ordering::Equal => match Ord::cmp(&self.words.len(), &other.words.len()) {
-                            Ordering::Equal => match Ord::cmp(
-                                &other.evolved_via.as_ref().unwrap().word.len(),
-                                &self.evolved_via.as_ref().unwrap().word.len(),
-                            ) {
-                                Ordering::Equal => match Ord::cmp(&self.id, &other.id) {
-                                    Ordering::Equal => match Ord::cmp(&self.tiles, &other.tiles) {
-                                        Ordering::Equal => {
-                                            match Ord::cmp(&self.width, &other.width) {
-                                                Ordering::Equal => {
-                                                    match Ord::cmp(&self.height, &other.height) {
-                                                        Ordering::Equal => match Ord::cmp(
-                                                            &self.min_word_length,
-                                                            &other.min_word_length,
-                                                        ) {
-                                                            Ordering::Equal => match Ord::cmp(
-                                                                &self.searched,
-                                                                &other.searched,
-                                                            ) {
-                                                                Ordering::Equal => Ord::cmp(
-                                                                    &self.cleaned,
-                                                                    &other.cleaned,
-                                                                ),
-                                                                cmp => cmp,
-                                                            },
+        match ::core::cmp::Ord::cmp(&other.cumulative_score, &self.cumulative_score) {
+            ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&other.usable_tiles, &self.usable_tiles) {
+                ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&other.multipliers.len(), &self.multipliers.len()) {
+                    ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&self.words.len(), &other.words.len()) {
+                        ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&other.evolved_via.as_ref().unwrap().word.len(), &self.evolved_via.as_ref().unwrap().word.len()) {
+                            ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&self.evolved_from, &other.evolved_from) {
+                                ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&self.id, &other.id) {
+                                    ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&self.tiles, &other.tiles) {
+                                        ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&self.width, &other.width) {
+                                            ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&self.height, &other.height) {
+                                                ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&self.min_word_length, &other.min_word_length) {
+                                                                    ::core::cmp::Ordering::Equal => match ::core::cmp::Ord::cmp(&self.searched, &other.searched) {
+                                                                                                    ::core::cmp::Ordering::Equal => ::core::cmp::Ord::cmp(&self.cleaned, &other.cleaned),
+                                                                                                    cmp => cmp,
+                                                                                                },
+                                                                                            cmp => cmp,
+                                                                                        },
+                                                                                    cmp => cmp,
+                                                                                },
+                                                                            cmp => cmp,
+                                                                        },
+                                                                    cmp => cmp,
+                                                                },
                                                             cmp => cmp,
                                                         },
-                                                        cmp => cmp,
-                                                    }
-                                                }
-                                                cmp => cmp,
-                                            }
-                                        }
-                                        cmp => cmp,
-                                    },
+                                                    cmp => cmp,
+                                                },
+                                            cmp => cmp,
+                                        },
                                     cmp => cmp,
                                 },
-                                cmp => cmp,
-                            },
                             cmp => cmp,
                         },
-                        cmp => cmp,
-                    }
-                }
-                cmp => cmp,
-            },
+                    cmp => cmp,
+                },
             cmp => cmp,
         }
     }

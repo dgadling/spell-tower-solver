@@ -50,7 +50,7 @@ impl Dictionary {
 
         bar.set_message("Populating caches");
 
-        words.iter().for_each(|word|{
+        words.iter().for_each(|word| {
             for l in 2..=word.len() {
                 let mut prefix = String::with_capacity(l);
                 prefix.push_str(&word[0..l]);

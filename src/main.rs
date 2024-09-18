@@ -62,40 +62,144 @@ pub struct Args {
     size_test: bool,
 
     #[arg(long)]
-    output_dir: String
+    output_dir: String,
 }
 
 fn size_test(args: Args) {
     let boards = vec![
         [
-            "i.ssbtpod".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "mcisneice".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "hcrqsovaa".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "ln.sgsnnr".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "eiusyijme".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "olmgapelf".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "tsaeeudhn".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "bsoenditr".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "cwoopteaf".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "itzoutner".chars().collect::<Vec<char>>().try_into().unwrap(),
-            ".upriigal".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "tkayee.ld".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "xlihcrras".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "i.ssbtpod"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "mcisneice"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "hcrqsovaa"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "ln.sgsnnr"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "eiusyijme"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "olmgapelf"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "tsaeeudhn"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "bsoenditr"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "cwoopteaf"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "itzoutner"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            ".upriigal"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "tkayee.ld"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "xlihcrras"
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
         ],
         [
-            "         ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "         ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "         ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "         ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "eiusy    ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "o.mga    ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "ts.ee    ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "bsoen    ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "cwoop    ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "itzoutn  ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            ".upriig  ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "tkayee.l ".chars().collect::<Vec<char>>().try_into().unwrap(),
-            "xlihcrra ".chars().collect::<Vec<char>>().try_into().unwrap(),
+            "         "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "         "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "         "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "         "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "eiusy    "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "o.mga    "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "ts.ee    "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "bsoen    "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "cwoop    "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "itzoutn  "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            ".upriig  "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "tkayee.l "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
+            "xlihcrra "
+                .chars()
+                .collect::<Vec<char>>()
+                .try_into()
+                .unwrap(),
         ],
     ];
 
@@ -185,7 +289,12 @@ fn main() {
             )
         }
     } else {
-        game::play_game(&args, input_board.board, input_board.mults.clone(), game_run_time)
+        game::play_game(
+            &args,
+            input_board.board,
+            input_board.mults.clone(),
+            game_run_time,
+        )
     }
 
     if !args.quiet {

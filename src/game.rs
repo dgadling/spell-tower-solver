@@ -287,12 +287,12 @@ pub fn play_game(
                                       )
                                       */
         });
-         _ = dump_vec(
-             generation,
-             "to-process-post-sort",
-             &to_process,
-             &args.output_dir,
-         );
+        _ = dump_vec(
+            generation,
+            "to-process-post-sort",
+            &to_process,
+            &args.output_dir,
+        );
         println!(
             "GENERATION {}: pre-truncate to_process ({} items) = {}",
             generation,
