@@ -1,5 +1,6 @@
 use crate::position::Position;
 
+use std::cmp::Ordering;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::hash::Hasher;
@@ -38,7 +39,7 @@ const LETTER_SCORES: &'static [u32] = &[
     11, // z
 ];
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, DeepSizeOf)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialOrd, PartialEq, DeepSizeOf)]
 pub struct FoundWord {
     pub path: Vec<Position>,
     pub word: String,
@@ -60,6 +61,120 @@ pub struct Board {
     evolved_via: Option<FoundWord>,
     evolved_from: Option<u64>,
     cleaned: bool,
+}
+
+/*
+Sort a Board by:
+- cumulative score, higher wins
+- usable tiles left, higher wins
+- multipliers left, higher wins,
+- words used, LOWER wins,
+- evolved_via.word, LONGER wins
+- evolved_from ; this is essentially a random number, but based on parents tiles so _could_ be the same
+- id ; this is essentially random but based on tiles so _could_ be the same
+- tiles ; idk how to compare these, so default sort
+
+The remaining fields are identical for all boards that would be compared to each other:
+- width
+- height
+- min_word_length
+- searched
+- cleaned
+ */
+
+impl PartialOrd for Board {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match PartialOrd::partial_cmp(&other.cumulative_score, &self.cumulative_score) {
+            Some(Ordering::Equal) => match PartialOrd::partial_cmp(&other.usable_tiles, &self.usable_tiles) {
+                    Some(Ordering::Equal) => match PartialOrd::partial_cmp(&other.multipliers.len(), &self.multipliers.len()) {
+                        Some(Ordering::Equal) =>  match PartialOrd::partial_cmp(&self.words.len(), &other.words.len()) {
+                                Some(Ordering::Equal) => match PartialOrd::partial_cmp(&other.evolved_via.as_ref().unwrap().word.len(), &self.evolved_via.as_ref().unwrap().word.len()) {
+                                    Some(Ordering::Equal) =>  match PartialOrd::partial_cmp(&self.id, &other.id) {
+                                            Some(Ordering::Equal) => match PartialOrd::partial_cmp(&self.tiles, &other.tiles) {
+                                                    Some(Ordering::Equal) =>  match PartialOrd::partial_cmp(&self.width, &other.width) {
+                                                             Some(Ordering::Equal) => match PartialOrd::partial_cmp(&self.height, &other.height) {
+                                                                    Some(Ordering::Equal) => PartialOrd::partial_cmp(&self.min_word_length, &other.min_word_length),
+                                                                    cmp => cmp,
+                                                             },
+                                                             cmp =>cmp,
+                                                        },
+                                                        cmp => cmp,
+                                                        },
+                                                        cmp => cmp,
+                                                    },
+                                                    cmp => cmp,
+                                                },
+                                                cmp => cmp,
+                                            },
+                                            cmp => cmp,
+                                        },
+                                        cmp => cmp,
+                                    },
+                                    cmp => cmp,
+                                },
+                                cmp => cmp,
+                            }
+
+    }
+}
+
+impl Ord for Board {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        match Ord::cmp(&other.cumulative_score, &self.cumulative_score) {
+            Ordering::Equal => match Ord::cmp(&other.usable_tiles, &self.usable_tiles) {
+                Ordering::Equal => {
+                    match Ord::cmp(&other.multipliers.len(), &self.multipliers.len()) {
+                        Ordering::Equal => match Ord::cmp(&self.words.len(), &other.words.len()) {
+                            Ordering::Equal => match Ord::cmp(
+                                &other.evolved_via.as_ref().unwrap().word.len(),
+                                &self.evolved_via.as_ref().unwrap().word.len(),
+                            ) {
+                                Ordering::Equal => match Ord::cmp(&self.id, &other.id) {
+                                    Ordering::Equal => match Ord::cmp(&self.tiles, &other.tiles) {
+                                        Ordering::Equal => {
+                                            match Ord::cmp(&self.width, &other.width) {
+                                                Ordering::Equal => {
+                                                    match Ord::cmp(&self.height, &other.height) {
+                                                        Ordering::Equal => match Ord::cmp(
+                                                            &self.min_word_length,
+                                                            &other.min_word_length,
+                                                        ) {
+                                                            Ordering::Equal => match Ord::cmp(
+                                                                &self.searched,
+                                                                &other.searched,
+                                                            ) {
+                                                                Ordering::Equal => Ord::cmp(
+                                                                    &self.cleaned,
+                                                                    &other.cleaned,
+                                                                ),
+                                                                cmp => cmp,
+                                                            },
+                                                            cmp => cmp,
+                                                        },
+                                                        cmp => cmp,
+                                                    }
+                                                }
+                                                cmp => cmp,
+                                            }
+                                        }
+                                        cmp => cmp,
+                                    },
+                                    cmp => cmp,
+                                },
+                                cmp => cmp,
+                            },
+                            cmp => cmp,
+                        },
+                        cmp => cmp,
+                    }
+                }
+                cmp => cmp,
+            },
+            cmp => cmp,
+        }
+    }
 }
 
 impl fmt::Display for Board {
@@ -258,7 +373,10 @@ impl Board {
             .collect()
     }
 
-    fn destroy_board(&self, path_of_destruction: &Vec<Position>) -> [[char; Board::WIDTH]; Board::HEIGHT] {
+    fn destroy_board(
+        &self,
+        path_of_destruction: &Vec<Position>,
+    ) -> [[char; Board::WIDTH]; Board::HEIGHT] {
         let mut new_tiles = self.tiles.clone();
 
         for p in path_of_destruction {
@@ -268,7 +386,10 @@ impl Board {
         new_tiles
     }
 
-    fn apply_gravity(tiles: &mut [[char; Board::WIDTH]; Board::HEIGHT], path_of_destruction: &mut Vec<Position>) {
+    fn apply_gravity(
+        tiles: &mut [[char; Board::WIDTH]; Board::HEIGHT],
+        path_of_destruction: &mut Vec<Position>,
+    ) {
         // Reverse sort based on row so we start at the lowest row and work our way back up
         path_of_destruction.sort_by(|a, b| b.row.cmp(&a.row));
 
@@ -345,6 +466,11 @@ impl Board {
         }
 
         if found_words.len() > top_n {
+            println!(
+                "Have {} > {} words, gotta truncate",
+                found_words.len(),
+                top_n
+            );
             /*
             Since we have too many, we need to pick some. Sort & truncate.
             Sorting order is:

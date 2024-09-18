@@ -6,6 +6,10 @@ use deepsize::DeepSizeOf;
 use indicatif::{HumanBytes, HumanCount, HumanDuration, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
+use std::fs::{self, File};
+use std::hash::{DefaultHasher, Hash, Hasher};
+use std::io::{self, Write};
+use std::path::Path;
 use std::time::Instant;
 
 #[cfg(target_os = "windows")]
@@ -14,6 +18,21 @@ use mimalloc::MiMalloc;
 #[cfg(target_os = "windows")]
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
+
+fn dump_vec(generation: u32, name: &str, v: &Vec<u64>, output_dir: &str) -> io::Result<()> {
+    let f_name = format!("{}/gen-{}-{}.txt", output_dir, generation, name);
+
+    if let Some(parent_dir) = Path::new(&f_name).parent() {
+        fs::create_dir_all(parent_dir)?;
+    }
+
+    let mut file = File::create(f_name)?;
+
+    for num in v {
+        writeln!(file, "{}", num)?;
+    }
+    Ok(())
+}
 
 pub fn play_game(
     args: &Args,
@@ -62,7 +81,7 @@ pub fn play_game(
         }
 
         // Search the boards in this generation, provided they're not somehow dupes
-        let newly_searched = to_process
+        let mut newly_searched = to_process
             .par_iter()
             .map(|board_id| {
                 let b = all_boards.get(&board_id).unwrap();
@@ -84,6 +103,17 @@ pub fn play_game(
             .flatten()
             .collect::<Vec<(u64, Vec<FoundWord>)>>();
         bar.finish();
+
+        newly_searched.sort();
+
+        let mut hasher = DefaultHasher::new();
+        newly_searched.hash(&mut hasher);
+
+        println!(
+            "GENERATION {}: newly_searched = {}",
+            generation,
+            hasher.finish()
+        );
 
         /*
         Now do a few things:
@@ -209,40 +239,98 @@ pub fn play_game(
         if !args.quiet {
             println!();
         }
+
+        /*
         generation += 1;
         if generation > args.max_generations {
             break;
         }
+        */
 
         to_process = Vec::from_iter(new_to_process.into_iter());
 
+        _ = dump_vec(
+            generation,
+            "to-process-pre-sort",
+            &to_process,
+            &args.output_dir,
+        );
+        //if to_process.len() > args.max_gen_size {
+        /*
+        Since we have too many, we need to pick some. Do that by sorting and truncating.
+        Sorting order is:
+          - cumulative board score ; highest wins
+          - usable tiles remaining ; highest wins
+          - whatever Ord/PartialOrd does
+        */
+        //println!(
+        //    "GENERATION {}: {} to process > {}, gotta sort & truncate",
+        //    generation,
+        //    to_process.len(),
+        //    args.max_gen_size
+        //);
+        to_process.sort_by(|a, b| {
+            let board_a = all_boards.get(a).unwrap();
+            let board_b = all_boards.get(b).unwrap();
+            board_a.cmp(&board_b) // NOTE: THIS IS STABLE
+                                  /*
+                                  board_a
+                                      .get_score()
+                                      .cmp(&board_b.get_score())
+                                      .reverse()
+                                      .then(
+                                          board_a
+                                              .usable_tiles
+                                              .cmp(&board_b.usable_tiles)
+                                              .reverse()
+                                              .then(board_a.cmp(&board_b)),
+                                      )
+                                      */
+        });
+         _ = dump_vec(
+             generation,
+             "to-process-post-sort",
+             &to_process,
+             &args.output_dir,
+         );
+        println!(
+            "GENERATION {}: pre-truncate to_process ({} items) = {}",
+            generation,
+            to_process.len(),
+            hasher.finish(),
+        );
         if to_process.len() > args.max_gen_size {
-            /*
-            Since we have too many, we need to pick some. Do that by sorting and truncating.
-            Sorting order is:
-              - cumulative board score ; highest wins
-              - usable tiles remaining ; highest wins
-              - board id ; lowest wins
-            */
-            to_process.sort_by(|a, b| {
-                let board_a = all_boards.get(a).unwrap();
-                let board_b = all_boards.get(b).unwrap();
-                board_a
-                    .get_score()
-                    .cmp(&board_b.get_score())
-                    .reverse()
-                    .then(
-                        board_a
-                            .usable_tiles
-                            .cmp(&board_b.usable_tiles)
-                            .reverse()
-                            .then(a.cmp(&b)),
-                    )
-            });
+            println!(
+                "GENERATION {}: {} to process > {}, gotta sort & truncate",
+                generation,
+                to_process.len(),
+                args.max_gen_size
+            );
             to_process.truncate(args.max_gen_size);
+        }
+
+        _ = dump_vec(
+            generation,
+            "to-process-final-sort",
+            &to_process,
+            &args.output_dir,
+        );
+        let mut hasher = DefaultHasher::new();
+        to_process.hash(&mut hasher);
+
+        println!(
+            "GENERATION {}: final to_process ({} items) = {}",
+            generation,
+            to_process.len(),
+            hasher.finish(),
+        );
+        generation += 1;
+        if generation > args.max_generations {
+            break;
         }
     }
 
+    return;
     let term_count = terminal_boards.len();
 
     let mut final_term_boards = terminal_boards.into_iter().collect::<Vec<u64>>();

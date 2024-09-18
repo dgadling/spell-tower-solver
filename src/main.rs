@@ -60,6 +60,9 @@ pub struct Args {
     /// Don't actually run anything, just do a size test
     #[arg(long, default_value_t = false)]
     size_test: bool,
+
+    #[arg(long)]
+    output_dir: String
 }
 
 fn size_test(args: Args) {
