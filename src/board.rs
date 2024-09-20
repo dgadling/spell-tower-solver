@@ -46,7 +46,7 @@ pub struct FoundWord {
     pub score: u32,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, DeepSizeOf)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, DeepSizeOf)]
 pub struct Board {
     pub id: u64,
     width: usize,
@@ -82,49 +82,58 @@ The remaining fields are identical for all boards that would be compared to each
 - cleaned
  */
 
-impl PartialOrd for Board {
-    #[rustfmt::skip]
-    #[inline]
-    fn partial_cmp(&self, other: &Board) -> Option<::core::cmp::Ordering> {
-        match PartialOrd::partial_cmp( &self.id, &other.id) {
-            Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp(&self.width, &other.width) {
-                Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.height, &other.height,) {
-                    Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.min_word_length, &other.min_word_length) {
-                        Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.tiles, &other.tiles) {
-                            Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.usable_tiles, &other.usable_tiles) {
-                                Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.multipliers, &other.multipliers) {
-                                    Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp(&self.cumulative_score, &self.cumulative_score) {
-                                        Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.searched, &other.searched) {
-                                            Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.words, &other.words) {
-                                                Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.evolved_via, &other.evolved_via) {
-                                                    Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.evolved_from, &other.evolved_from) {
-                                                        Option::Some( Ordering::Equal) =>  PartialOrd::partial_cmp( &self.cleaned, &other.cleaned),
-                                                        cmp => cmp,
-                                                    },
-                                                    cmp => cmp,
-                                                },
-                                                cmp => cmp,
-                                            },
-                                            cmp => cmp,
-                                        },
-                                        cmp => cmp,
-                                    },
-                                    cmp => cmp,
-                                },
-                                cmp => cmp,
-                            },
-                            cmp => cmp,
-                        },
-                        cmp => cmp,
-                    },
-                    cmp => cmp,
-                },
-                cmp => cmp,
-            },
-            cmp => cmp,
-        }
-    }
-}
+//impl PartialOrd for Board {
+//    #[rustfmt::skip]
+//    #[inline]
+//    fn partial_cmp(&self, other: &Board) -> Option<::core::cmp::Ordering> {
+//        if self.id == 9307076570614537816 {
+//            println!("PartialOrd: it's ya boy!");
+//            println!("self = {:?}", &self);
+//            println!("other = {:?}", &other);
+//        }
+//
+//        // match PartialOrd::partial_cmp( &self.id, &other.id) {
+//            //match PartialOrd::partial_cmp(&self.width, &other.width) {
+//                //Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.height, &other.height,) {
+//                    //Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.min_word_length, &other.min_word_length) {
+//                                     match PartialOrd::partial_cmp(&self.cumulative_score, &other.cumulative_score) {
+//                        Option::Some(Ordering::Equal) =>match PartialOrd::partial_cmp( &self.tiles, &other.tiles) {
+//                            Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.usable_tiles, &other.usable_tiles) {
+//                                Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.multipliers, &other.multipliers) {
+//                                        Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.searched, &other.searched) {
+//                                            Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.words, &other.words) {
+//                                                Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.evolved_via, &other.evolved_via) {
+//                                                    Option::Some(Ordering::Equal) => match PartialOrd::partial_cmp( &self.evolved_from, &other.evolved_from) {
+//                                                        Option::Some( Ordering::Equal) => {
+//                                                            println!("PartialOrd: OMG somehow board {} & {} have the same everything", &self.id, &other.id);
+//                                                            return PartialOrd::partial_cmp( &self.cleaned, &other.cleaned)
+//                                                        },
+//                                                        cmp => cmp,
+//                                                    },
+//                                                    cmp => cmp,
+//                                                },
+//                                                cmp => cmp,
+//                                            },
+//                                            cmp => cmp,
+//                                        },
+//                                        cmp => cmp,
+//                                    },
+//                                    cmp => cmp,
+//                                },
+//                                cmp => cmp,
+//                            },
+//                            cmp => cmp,
+//                        }
+//                    //    cmp => cmp,
+//                    //},
+//                //    cmp => cmp,
+//                //},
+//            //    cmp => cmp,
+//            //}
+//        //    cmp => cmp,
+//        //}
+//    }
+//}
 
 /* Dave's version
 impl PartialOrd for Board {
@@ -178,49 +187,61 @@ impl PartialOrd for Board {
 }
 */
 
-impl Ord for Board {
-    #[rustfmt::skip]
-    #[inline]
-    fn cmp(&self, other: &Self) -> Ordering {
-        match Ord::cmp(&self.id, &other.id) {
-            Ordering::Equal => match Ord::cmp(&self.width, &other.width) {
-                Ordering::Equal => match Ord::cmp( &self.height, &other.height,) {
-                    Ordering::Equal => match Ord::cmp( &self.min_word_length, &other.min_word_length,) {
-                        Ordering::Equal => match Ord::cmp(&self.tiles, &other.tiles) {
-                            Ordering::Equal => match Ord::cmp(&self.usable_tiles, &other.usable_tiles) {
-                                Ordering::Equal => match Ord::cmp(&self.multipliers, &other.multipliers) {
-                                    Ordering::Equal => match Ord::cmp(&self.cumulative_score, &other.cumulative_score) {
-                                        Ordering::Equal => match Ord::cmp( &self.searched, &other.searched,) {
-                                            Ordering::Equal => match Ord::cmp(&self.words, &other.words) {
-                                                Ordering::Equal => match Ord::cmp( &self.evolved_via, &other.evolved_via) {
-                                                    Ordering::Equal => match Ord::cmp(&self.evolved_from, &other.evolved_from) {
-                                                        Ordering::Equal => Ord::cmp( &self.cleaned, &other.cleaned),
-                                                        cmp => cmp,
-                                                    },
-                                                    cmp => cmp,
-                                                },
-                                                cmp => cmp,
-                                            },
-                                            cmp => cmp,
-                                        },
-                                        cmp => cmp,
-                                    },
-                                    cmp => cmp,
-                                },
-                                cmp => cmp,
-                            },
-                            cmp => cmp,
-                        },
-                        cmp => cmp,
-                    },
-                    cmp => cmp,
-                },
-                cmp => cmp,
-            },
-            cmp => cmp,
-        }
-    }
-}
+//impl Ord for Board {
+//    #[rustfmt::skip]
+//    #[inline]
+//    fn cmp(&self, other: &Self) -> Ordering {
+//        let ans = {
+//        match Ord::cmp(&self.id, &other.id) {
+//            Ordering::Equal =>match Ord::cmp(&self.width, &other.width) {
+//                Ordering::Equal => match Ord::cmp( &self.height, &other.height,) {
+//                    Ordering::Equal => match Ord::cmp( &self.min_word_length, &other.min_word_length,) {
+//                        Ordering::Equal => match Ord::cmp(&self.cumulative_score, &other.cumulative_score) {
+//                        Ordering::Equal =>match Ord::cmp(&self.tiles, &other.tiles) {
+//                            Ordering::Equal => match Ord::cmp(&self.usable_tiles, &other.usable_tiles) {
+//                                Ordering::Equal => match Ord::cmp(&self.multipliers, &other.multipliers) {
+//                                        Ordering::Equal => match Ord::cmp( &self.searched, &other.searched,) {
+//                                            Ordering::Equal => match Ord::cmp(&self.words, &other.words) {
+//                                                Ordering::Equal => match Ord::cmp( &self.evolved_via, &other.evolved_via) {
+//                                                    Ordering::Equal => match Ord::cmp(&self.evolved_from, &other.evolved_from) {
+//                                                        Ordering::Equal => {
+//                                                            let final_ans = Ord::cmp( &self.cleaned, &other.cleaned);
+//                                                            println!("Ord: OMG somehow {} & {} have the same everything?", &self.id, &other.id);
+//                                                            return final_ans
+//                                                        },
+//                                                        cmp => cmp,
+//                                                    },
+//                                                    cmp => cmp,
+//                                                },
+//                                                cmp => cmp,
+//                                            },
+//                                            cmp => cmp,
+//                                        },
+//                                        cmp => cmp,
+//                                    },
+//                                    cmp => cmp,
+//                                },
+//                                cmp => cmp,
+//                            },
+//                            cmp => cmp,
+//                        }
+//                        cmp => cmp,
+//                    }
+//                    cmp => cmp,
+//                },
+//                cmp => cmp,
+//            },
+//            cmp => cmp,
+//        }
+//                    };
+//        if self.id == 9307076570614537816 {
+//            println!("Ord: it's ya boy vs {}! answer = {:?}", &other.id, ans);
+//            //println!("self = {:?}", &self);
+//            //println!("other = {:?}", &other);
+//        }
+//                    return ans;
+//    }
+//}
 /* Dave's version
 impl Ord for Board {
     #[rustfmt::skip]
@@ -563,11 +584,11 @@ impl Board {
         }
 
         if found_words.len() > top_n {
-            println!(
-                "Have {} > {} words, gotta truncate",
-                found_words.len(),
-                top_n
-            );
+            //println!(
+            //    "Have {} > {} words, gotta truncate",
+            //    found_words.len(),
+            //    top_n
+            //);
             /*
             Since we have too many, we need to pick some. Sort & truncate.
             Sorting order is:
