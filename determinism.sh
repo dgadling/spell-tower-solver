@@ -1,10 +1,18 @@
 #!/bin/zsh
 
+if [[ ${#WSL_DISTRO_NAME} ]] ; then
+    cmd_suffix=".exe"
+else
+    cmd_suffix=""
+fi
+
 cargo build --release
+
 rm -rf run1 run2
-final_gen=3
+final_gen=4
+
 for run_n in {1..2} ; {
-    target/release/spell-tower-solver sample-input/board-1.ron -q -c 15 --max-generations ${final_gen} --output-dir run${run_n}
+    target/release/spell-tower-solver${cmd_suffix} sample-input/board-1.ron -q -c 15 --max-generations ${final_gen} --output-dir run${run_n}
 };
 
 diff run1/gen-${final_gen}-to-process-final-sort.txt run2/gen-${final_gen}-to-process-final-sort.txt &> /dev/null

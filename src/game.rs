@@ -269,24 +269,19 @@ pub fn play_game(
         //    to_process.len(),
         //    args.max_gen_size
         //);
+        println!(
+            "BEFORE SORT: Our chosen board, 9966998984286266045 looks like:\n{:?}",
+            all_boards.get(&9966998984286266045)
+        );
         to_process.sort_by(|a, b| {
             let board_a = all_boards.get(a).unwrap();
             let board_b = all_boards.get(b).unwrap();
-            board_a.cmp(&board_b) // NOTE: THIS IS STABLE
-                                  /*
-                                  board_a
-                                      .get_score()
-                                      .cmp(&board_b.get_score())
-                                      .reverse()
-                                      .then(
-                                          board_a
-                                              .usable_tiles
-                                              .cmp(&board_b.usable_tiles)
-                                              .reverse()
-                                              .then(board_a.cmp(&board_b)),
-                                      )
-                                      */
+            board_a.cmp(&board_b)
         });
+        println!(
+            "AFTER SORT: Our chosen board, 9966998984286266045 looks like:\n{:?}",
+            all_boards.get(&9966998984286266045)
+        );
         _ = dump_vec(
             generation,
             "to-process-post-sort",
